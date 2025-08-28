@@ -9,18 +9,21 @@ import (
 
 func main() {
 	router := gin.Default()
-	
+
 	// Existing contrast adjustment route
 	router.POST("/adjust-contrast", adjustContrastHandler)
-	
+
 	// New lottery winning numbers route
 	router.POST("/lottery-winning-numbers", lotteryWinningNumbersHandler)
-	
+
+	// New lottery prize amounts route
+	router.POST("/lottery-prize-amounts", lotteryPrizeAmountsHandler)
+
 	// Add a simple health check route
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy", "message": "Lottery API is running"})
 	})
-	
+
 	router.Run(":8080")
 }
 
@@ -55,6 +58,36 @@ func lotteryWinningNumbersHandler(c *gin.Context) {
 
 	// Get winning numbers for the specified date and lottery type
 	response, err := getLotteryWinningNumbers(req.Date, req.LotteryType)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("Internal server error: %v", err),
+		})
+		return
+	}
+
+	// Return the response with appropriate HTTP status
+	if response.Success {
+		c.JSON(http.StatusOK, response)
+	} else {
+		c.JSON(http.StatusBadRequest, response)
+	}
+}
+
+// lotteryPrizeAmountsHandler handles requests for lottery prize amounts
+// This handler processes POST requests to get prize information for a specific date and lottery type
+func lotteryPrizeAmountsHandler(c *gin.Context) {
+	var req PrizeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("Invalid request format: %v", err),
+		})
+		return
+	}
+
+	// Get prize amounts for the specified date and lottery type
+	response, err := getLotteryPrizeAmounts(req.Date, req.LotteryType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

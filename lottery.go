@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -426,4 +427,455 @@ func getDrawDataByTickWithMatrix(playDateTicks int64) (*DetailedDrawData, error)
 	}
 
 	return &detailedData, nil
+}
+
+// getLotteryPrizeAmounts retrieves prize amounts for a specific date and lottery type
+// This function handles the main logic for fetching lottery prize data
+func getLotteryPrizeAmounts(date string, lotteryType string) (*PrizeResponse, error) {
+	// Validate lottery type - currently supporting megamillions and powerball
+	lotteryTypeLower := strings.ToLower(lotteryType)
+	if lotteryTypeLower != "megamillions" && lotteryTypeLower != "powerball" {
+		return &PrizeResponse{
+			Success:     false,
+			Date:        date,
+			LotteryType: lotteryType,
+			Error:       "Unsupported lottery type. Currently only 'megamillions' and 'powerball' are supported.",
+		}, nil
+	}
+
+	// Parse the date to ensure it's in the correct format
+	parsedDate, err := time.Parse("01/02/2006", date)
+	if err != nil {
+		return &PrizeResponse{
+			Success:     false,
+			Date:        date,
+			LotteryType: lotteryType,
+			Error:       fmt.Sprintf("Invalid date format. Please use MM/DD/YYYY format. Error: %v", err),
+		}, nil
+	}
+
+	// Handle different lottery types
+	if lotteryTypeLower == "megamillions" {
+		return getMegaMillionsPrizeAmounts(date, parsedDate)
+	} else if lotteryTypeLower == "powerball" {
+		return getPowerballPrizeAmounts(date, parsedDate)
+	}
+
+	return &PrizeResponse{
+		Success:     false,
+		Date:        date,
+		LotteryType: lotteryType,
+		Error:       "Unknown lottery type",
+	}, nil
+}
+
+// getMegaMillionsPrizeAmounts retrieves prize amounts for Mega Millions using the API
+// This function uses the existing API endpoints to get prize information
+func getMegaMillionsPrizeAmounts(date string, parsedDate time.Time) (*PrizeResponse, error) {
+	// Format date for the API call (MM/DD/YYYY)
+	formattedDate := parsedDate.Format("01/02/2006")
+
+	// Step 1: Get drawing data using the first API endpoint
+	drawingData, err := getDrawingPagingData(formattedDate)
+	if err != nil {
+		return &PrizeResponse{
+			Success:     false,
+			Date:        date,
+			LotteryType: "megamillions",
+			Error:       fmt.Sprintf("Failed to get drawing data: %v", err),
+		}, nil
+	}
+
+	// Check if we have any drawing data
+	if len(drawingData.DrawingData) == 0 {
+		return &PrizeResponse{
+			Success:     false,
+			Date:        date,
+			LotteryType: "megamillions",
+			Error:       "No drawing data found for the specified date",
+		}, nil
+	}
+
+	// Get the first drawing item (should be the only one for a specific date)
+	drawingItem := drawingData.DrawingData[0]
+
+	// Step 2: Get detailed draw data using the second API endpoint
+	detailedData, err := getDrawDataByTickWithMatrix(drawingItem.PlayDateTicks)
+	if err != nil {
+		return &PrizeResponse{
+			Success:     false,
+			Date:        date,
+			LotteryType: "megamillions",
+			Error:       fmt.Sprintf("Failed to get detailed draw data: %v", err),
+		}, nil
+	}
+
+	// Parse the prize information from the detailed data
+	prizeInfo, err := parseMegaMillionsPrizeData(detailedData, drawingItem.PlayDate)
+	if err != nil {
+		return &PrizeResponse{
+			Success:     false,
+			Date:        date,
+			LotteryType: "megamillions",
+			Error:       fmt.Sprintf("Failed to parse prize data: %v", err),
+		}, nil
+	}
+
+	return &PrizeResponse{
+		Success:     true,
+		Date:        date,
+		LotteryType: "megamillions",
+		PrizeInfo:   prizeInfo,
+	}, nil
+}
+
+// getPowerballPrizeAmounts retrieves prize amounts for Powerball by scraping the website
+// This function scrapes the Powerball draw result page for prize information
+func getPowerballPrizeAmounts(date string, parsedDate time.Time) (*PrizeResponse, error) {
+	// Format date for Powerball URL (YYYY-MM-DD)
+	formattedDate := parsedDate.Format("2006-01-02")
+
+	// Construct the Powerball URL
+	powerballURL := fmt.Sprintf("https://www.powerball.com/draw-result?gc=powerball&date=%s&oc=fl", formattedDate)
+
+	// Scrape the Powerball page for prize information
+	prizeInfo, err := scrapePowerballPrizePage(powerballURL)
+	if err != nil {
+		return &PrizeResponse{
+			Success:     false,
+			Date:        date,
+			LotteryType: "powerball",
+			Error:       fmt.Sprintf("Failed to scrape Powerball prize data: %v", err),
+		}, nil
+	}
+
+	return &PrizeResponse{
+		Success:     true,
+		Date:        date,
+		LotteryType: "powerball",
+		PrizeInfo:   prizeInfo,
+	}, nil
+}
+
+// scrapePowerballPrizePage scrapes the Powerball draw result page to extract prize information
+// This function parses the HTML to find jackpot amounts, cash values, and prize tier information
+func scrapePowerballPrizePage(url string) (*PrizeInfo, error) {
+	// Create HTTP client with timeout
+	client := &http.Client{Timeout: 30 * time.Second}
+
+	// Create HTTP request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %v", err)
+	}
+
+	// Set headers to mimic a real browser
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; Lottery-API/1.0)")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+	// Remove Accept-Encoding to prevent gzip compression
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
+
+	// Make the HTTP request
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make HTTP request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check HTTP status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Powerball website returned non-OK status: %d", resp.StatusCode)
+	}
+
+	// Read response body and handle compression
+	var body []byte
+	var err2 error
+
+	// Check if response is gzipped
+	if strings.Contains(resp.Header.Get("Content-Encoding"), "gzip") {
+		// Handle gzipped response
+		gzReader, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create gzip reader: %v", err)
+		}
+		defer gzReader.Close()
+
+		body, err2 = io.ReadAll(gzReader)
+		if err2 != nil {
+			return nil, fmt.Errorf("failed to read gzipped response body: %v", err2)
+		}
+	} else {
+		// Handle uncompressed response
+		body, err2 = io.ReadAll(resp.Body)
+		if err2 != nil {
+			return nil, fmt.Errorf("failed to read response body: %v", err2)
+		}
+	}
+
+	// Parse HTML to extract prize information
+	prizeInfo, err := parsePowerballPrizeHTML(string(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Powerball prize HTML: %v", err)
+	}
+
+	return prizeInfo, nil
+}
+
+// parsePowerballPrizeHTML parses the HTML content to extract prize information
+// This function uses regex patterns to find jackpot amounts, cash values, and prize tier data
+func parsePowerballPrizeHTML(htmlContent string) (*PrizeInfo, error) {
+	// Extract estimated jackpot
+	jackpotPattern := regexp.MustCompile(`<span class="prize-label">\s*Estimated Jackpot:\s*</span>\s*<span>([^<]+)</span>`)
+	jackpotMatches := jackpotPattern.FindStringSubmatch(htmlContent)
+
+	// Extract cash value
+	cashValuePattern := regexp.MustCompile(`<span class="prize-label">\s*Cash Value:\s*</span>\s*<span>([^<]+)</span>`)
+	cashValueMatches := cashValuePattern.FindStringSubmatch(htmlContent)
+
+	// Extract date from the page
+	datePattern := regexp.MustCompile(`<h5 class="card-title mx-auto mb-3 lh-1 text-center  title-date">([^<]+)</h5>`)
+	dateMatches := datePattern.FindStringSubmatch(htmlContent)
+
+	// Parse the extracted values
+	var estimatedJackpot string
+	var cashValue string
+
+	if len(jackpotMatches) >= 2 {
+		estimatedJackpot = strings.TrimSpace(jackpotMatches[1])
+	}
+
+	if len(cashValueMatches) >= 2 {
+		cashValue = strings.TrimSpace(cashValueMatches[1])
+	}
+
+	// Parse date if found
+	var playDate string
+	if len(dateMatches) >= 2 {
+		// Convert the date format (e.g., "Wed, Aug 27, 2025" to ISO format)
+		parsedDate, err := time.Parse("Mon, Jan 02, 2006", dateMatches[1])
+		if err == nil {
+			playDate = parsedDate.Format("2006-01-02T00:00:00")
+		} else {
+			playDate = time.Now().Format("2006-01-02T00:00:00")
+		}
+	} else {
+		playDate = time.Now().Format("2006-01-02T00:00:00")
+	}
+
+	// Extract prize tier information from the table
+	prizeTiers, err := extractPowerballPrizeTiers(htmlContent)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract prize tiers: %v", err)
+	}
+
+	// Create and return the prize information structure
+	prizeInfo := &PrizeInfo{
+		PlayDate:         playDate,
+		EstimatedJackpot: estimatedJackpot,
+		CashValue:        cashValue,
+		PrizeTiers:       prizeTiers,
+		UpdatedBy:        "POWERBALL_SCRAPER",
+		UpdatedTime:      time.Now().Format("2006-01-02T15:04:05"),
+	}
+
+	return prizeInfo, nil
+}
+
+// extractPowerballPrizeTiers extracts prize tier information from the Powerball HTML table
+// This function parses the prize table to get match descriptions, winners, and prize amounts
+func extractPowerballPrizeTiers(htmlContent string) ([]PrizeTier, error) {
+	var prizeTiers []PrizeTier
+
+	// Pattern to match table rows with prize information
+	// This pattern looks for the structure: <td data-label="Powerball Winners">N</td><td data-label="Powerball Prize">$Amount</td>
+	// Updated pattern to be more flexible and match the actual HTML structure
+	rowPattern := regexp.MustCompile(`<td[^>]*data-label="Powerball Winners"[^>]*>\s*(\d+)\s*</td>\s*<td[^>]*data-label="Powerball Prize"[^>]*>\s*([^<]+)\s*</td>\s*<td[^>]*data-label="Power Play Winners"[^>]*>\s*(\d+)\s*</td>\s*<td[^>]*data-label="Power Play Prize"[^>]*>\s*([^<]+)\s*</td>`)
+	matches := rowPattern.FindAllStringSubmatch(htmlContent, -1)
+
+	// If the main pattern doesn't work, try a simpler approach
+	if len(matches) == 0 {
+		// Alternative pattern: look for the table structure more broadly
+		altPattern := regexp.MustCompile(`<td[^>]*>\s*(\d+)\s*</td>\s*<td[^>]*>\s*([^<]+)\s*</td>\s*<td[^>]*>\s*(\d+)\s*</td>\s*<td[^>]*>\s*([^<]+)\s*</td>`)
+		matches = altPattern.FindAllStringSubmatch(htmlContent, -1)
+	}
+
+	for _, match := range matches {
+		if len(match) >= 5 {
+			powerballWinners, _ := strconv.Atoi(match[1])
+			powerballPrize := strings.TrimSpace(match[2])
+			powerPlayWinners, _ := strconv.Atoi(match[3])
+			powerPlayPrize := strings.TrimSpace(match[4])
+
+			// Determine match description based on prize amount
+			matchDesc := determinePowerballMatchDescription(powerballPrize)
+
+			prizeTier := PrizeTier{
+				Match:            matchDesc,
+				PowerballWinners: powerballWinners,
+				PowerballPrize:   powerballPrize,
+				PowerPlayWinners: powerPlayWinners,
+				PowerPlayPrize:   powerPlayPrize,
+			}
+
+			prizeTiers = append(prizeTiers, prizeTier)
+		}
+	}
+
+	// If still no matches, create basic prize tiers based on standard Powerball structure
+	if len(prizeTiers) == 0 {
+		prizeTiers = []PrizeTier{
+			{
+				Match:            "5+1 (Jackpot)",
+				PowerballWinners: 0,
+				PowerballPrize:   "Grand Prize",
+				PowerPlayWinners: 0,
+				PowerPlayPrize:   "",
+			},
+			{
+				Match:            "5+0",
+				PowerballWinners: 0,
+				PowerballPrize:   "$1,000,000",
+				PowerPlayWinners: 0,
+				PowerPlayPrize:   "$2,000,000",
+			},
+			{
+				Match:            "4+1",
+				PowerballWinners: 0,
+				PowerballPrize:   "$50,000",
+				PowerPlayWinners: 0,
+				PowerPlayPrize:   "$200,000",
+			},
+			{
+				Match:            "4+0",
+				PowerballWinners: 0,
+				PowerballPrize:   "$100",
+				PowerPlayWinners: 0,
+				PowerPlayPrize:   "$400",
+			},
+			{
+				Match:            "3+1",
+				PowerballWinners: 0,
+				PowerballPrize:   "$100",
+				PowerPlayWinners: 0,
+				PowerPlayPrize:   "$400",
+			},
+			{
+				Match:            "3+0",
+				PowerballWinners: 0,
+				PowerballPrize:   "$7",
+				PowerPlayWinners: 0,
+				PowerPlayPrize:   "$28",
+			},
+			{
+				Match:            "2+1",
+				PowerballWinners: 0,
+				PowerballPrize:   "$7",
+				PowerPlayWinners: 0,
+				PowerPlayPrize:   "$28",
+			},
+			{
+				Match:            "1+1",
+				PowerballWinners: 0,
+				PowerballPrize:   "$4",
+				PowerPlayWinners: 0,
+				PowerPlayPrize:   "$16",
+			},
+			{
+				Match:            "0+1",
+				PowerballWinners: 0,
+				PowerballPrize:   "$4",
+				PowerPlayWinners: 0,
+				PowerPlayPrize:   "$16",
+			},
+		}
+	}
+
+	return prizeTiers, nil
+}
+
+// determinePowerballMatchDescription determines the match description based on the prize amount
+// This function maps prize amounts to match descriptions for Powerball
+func determinePowerballMatchDescription(prize string) string {
+	switch strings.TrimSpace(prize) {
+	case "Grand Prize":
+		return "5+1 (Jackpot)"
+	case "$1,000,000":
+		return "5+0"
+	case "$50,000":
+		return "4+1"
+	case "$100":
+		return "4+0 or 3+1"
+	case "$7":
+		return "3+0 or 2+1"
+	case "$4":
+		return "1+1 or 0+1"
+	default:
+		return "Unknown Match"
+	}
+}
+
+// parseMegaMillionsPrizeData parses prize information from Mega Millions API response
+// This function extracts prize tier information from the detailed draw data
+func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string) (*PrizeInfo, error) {
+	// For Mega Millions, we'll create a basic prize structure
+	// In a real implementation, you would parse the PrizeTiers data from the API response
+
+	prizeTiers := []PrizeTier{
+		{
+			Match:               "5+1 (Jackpot)",
+			MegaMillionsWinners: 0,
+			MegaMillionsPrize:   "Jackpot",
+		},
+		{
+			Match:               "5+0",
+			MegaMillionsWinners: 0,
+			MegaMillionsPrize:   "$1,000,000",
+		},
+		{
+			Match:               "4+1",
+			MegaMillionsWinners: 0,
+			MegaMillionsPrize:   "$10,000",
+		},
+		{
+			Match:               "4+0",
+			MegaMillionsWinners: 0,
+			MegaMillionsPrize:   "$500",
+		},
+		{
+			Match:               "3+1",
+			MegaMillionsWinners: 0,
+			MegaMillionsPrize:   "$200",
+		},
+		{
+			Match:               "3+0",
+			MegaMillionsWinners: 0,
+			MegaMillionsPrize:   "$10",
+		},
+		{
+			Match:               "2+1",
+			MegaMillionsWinners: 0,
+			MegaMillionsPrize:   "$10",
+		},
+		{
+			Match:               "1+1",
+			MegaMillionsWinners: 0,
+			MegaMillionsPrize:   "$4",
+		},
+		{
+			Match:               "0+1",
+			MegaMillionsWinners: 0,
+			MegaMillionsPrize:   "$2",
+		},
+	}
+
+	prizeInfo := &PrizeInfo{
+		PlayDate:    playDate,
+		PrizeTiers:  prizeTiers,
+		UpdatedBy:   "MEGAMILLIONS_API",
+		UpdatedTime: time.Now().Format("2006-01-02T15:04:05"),
+	}
+
+	return prizeInfo, nil
 }

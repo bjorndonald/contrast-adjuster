@@ -77,3 +77,41 @@ type DetailedDrawData struct {
 	Jackpot    interface{} `json:"Jackpot"`    // Using interface{} for flexibility
 	PrizeTiers interface{} `json:"PrizeTiers"` // Using interface{} for flexibility
 }
+
+// Request payload structure for prize amounts
+type PrizeRequest struct {
+	Date        string `json:"date" binding:"required"`         // Date in MM/DD/YYYY format
+	LotteryType string `json:"lottery_type" binding:"required"` // Type of lottery (e.g., "megamillions", "powerball")
+}
+
+// Response payload structure for prize amounts
+type PrizeResponse struct {
+	Success     bool       `json:"success"`
+	Date        string     `json:"date"`
+	LotteryType string     `json:"lottery_type"`
+	PrizeInfo   *PrizeInfo `json:"prize_info,omitempty"`
+	Error       string     `json:"error,omitempty"`
+}
+
+// Structure to hold prize information
+type PrizeInfo struct {
+	PlayDate         string      `json:"play_date"`
+	EstimatedJackpot string      `json:"estimated_jackpot,omitempty"`
+	CashValue        string      `json:"cash_value,omitempty"`
+	PrizeTiers       []PrizeTier `json:"prize_tiers"`
+	UpdatedBy        string      `json:"updated_by"`
+	UpdatedTime      string      `json:"updated_time"`
+}
+
+// Structure for individual prize tiers
+type PrizeTier struct {
+	Match               string `json:"match"`                          // Match description (e.g., "5+1", "5+0", "4+1")
+	PowerballWinners    int    `json:"powerball_winners,omitempty"`    // Number of winners without Power Play
+	PowerballPrize      string `json:"powerball_prize,omitempty"`      // Prize amount without Power Play
+	PowerPlayWinners    int    `json:"power_play_winners,omitempty"`   // Number of winners with Power Play
+	PowerPlayPrize      string `json:"power_play_prize,omitempty"`     // Prize amount with Power Play
+	MegaMillionsWinners int    `json:"megamillions_winners,omitempty"` // Number of Mega Millions winners
+	MegaMillionsPrize   string `json:"megamillions_prize,omitempty"`   // Mega Millions prize amount
+	MegaplierWinners    int    `json:"megaplier_winners,omitempty"`    // Number of winners with Megaplier
+	MegaplierPrize      string `json:"megaplier_prize,omitempty"`      // Prize amount with Megaplier
+}
