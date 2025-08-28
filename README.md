@@ -1,120 +1,97 @@
-# Contrast Adjuster with Lottery Number Scraper
+# Contrast Adjuster with Lottery Scraping
 
 This Go application provides two main functionalities:
 1. **Image Contrast Adjustment** - Adjusts the contrast of images
-2. **Lottery Number Scraping** - Scrapes winning lottery numbers from lottery websites
+2. **Lottery Number Scraping** - Scrapes winning lottery numbers from official websites
 
 ## Features
 
-### Image Contrast Adjustment
-- POST `/adjust-contrast` - Adjusts image contrast based on provided factor
+### Lottery Scraping
+- Supports **Mega Millions** and **Powerball** lottery types
+- Scrapes winning numbers based on specific dates
+- Extracts main numbers, bonus balls, and multipliers
+- Handles both lottery websites with different HTML structures
 
-### Lottery Number Scraping
-- POST `/lottery-numbers` - Scrapes winning lottery numbers for a specific date
+## API Endpoints
 
-**Supported Lottery Types:**
-- **Mega Millions** - Scrapes from [megamillions.com](https://www.megamillions.com)
-- **Powerball** - Scrapes from [powerball.com](https://www.powerball.com)
+### 1. Contrast Adjustment
+- **POST** `/adjust-contrast`
+- Adjusts image contrast based on provided factor
 
-## Lottery Endpoint Usage
+### 2. Lottery Numbers
+- **POST** `/lottery-numbers`
+- Scrapes winning lottery numbers for a specific date and lottery type
+
+## Lottery Scraping Usage
 
 ### Request Format
 ```json
 {
   "date": "08/19/2025",
-  "lottery": "powerball"
+  "lottery_type": "megamillions"
 }
 ```
 
-**Parameters:**
-- `date`: Date in MM/DD/YYYY format (e.g., "08/19/2025")
-- `lottery`: Type of lottery - supports "megamillions" or "powerball"
+### Supported Lottery Types
+- `megamillions` - Scrapes from Mega Millions website
+- `powerball` - Scrapes from Powerball website
 
 ### Response Format
-
-#### Mega Millions Response
 ```json
 {
   "date": "08/19/2025",
-  "lottery": "megamillions",
-  "winning_numbers": [12, 24, 35, 41, 58],
-  "mega_ball": 15,
-  "megaplier": 3,
-  "success": true,
-  "message": "Successfully retrieved winning numbers"
+  "lottery_type": "megamillions",
+  "numbers": ["10", "19", "24", "49", "68"],
+  "mega_ball": "10",
+  "megaplier": "N/A"
 }
 ```
 
-#### Powerball Response
+For Powerball:
 ```json
 {
   "date": "08/19/2025",
-  "lottery": "powerball",
-  "winning_numbers": [9, 12, 22, 41, 61],
-  "mega_ball": 25,
-  "megaplier": 4,
-  "success": true,
-  "message": "Successfully retrieved winning numbers"
+  "lottery_type": "powerball",
+  "numbers": ["9", "12", "22", "41", "61"],
+  "power_ball": "25",
+  "power_play": "4x"
 }
 ```
 
-**Response Fields:**
-- `date`: The requested date
-- `lottery`: The lottery type
-- `winning_numbers`: Array of 5 main winning numbers
-- `mega_ball`: Mega Ball number (Mega Millions) or Powerball number (Powerball)
-- `megaplier`: Megaplier value (Mega Millions) or Power Play multiplier (Powerball)
-- `success`: Boolean indicating if scraping was successful
-- `message`: Success or error message
+## URL Construction
 
-### Example Usage
+The application automatically constructs the appropriate URLs:
 
-#### Mega Millions
-```bash
-curl -X POST http://localhost:8080/lottery-numbers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "date": "08/19/2025",
-    "lottery": "megamillions"
-  }'
-```
+- **Mega Millions**: `https://www.megamillions.com/Winning-Numbers/Previous-Drawings.aspx?pageNumber=1&pageSize=20&startDate={date}&endDate={date}`
+- **Powerball**: `https://www.powerball.com/draw-result?gc=powerball&date={date}`
 
-#### Powerball
-```bash
-curl -X POST http://localhost:8080/lottery-numbers \
-  -H "Content-Type: application/json" \
-  -d '{
-    "date": "08/19/2025",
-    "lottery": "powerball"
-  }'
-```
+## Date Format
+
+Dates must be provided in the format: `MM/DD/YYYY` (e.g., `08/19/2025`)
+
+## Installation
+
+1. Ensure Go 1.24.6+ is installed
+2. Clone the repository
+3. Run `go mod tidy` to download dependencies
+4. Run `go run .` to start the server
 
 ## Dependencies
 
-The application requires the following Go packages:
 - `github.com/gin-gonic/gin` - Web framework
+- `github.com/PuerkitoBio/goquery` - HTML parsing
 - `golang.org/x/image` - Image processing
-- `golang.org/x/net/html` - HTML parsing for web scraping
+- `golang.org/x/net` - Network utilities
 
-## Running the Application
+## Error Handling
 
-1. Install dependencies:
-   ```bash
-   go mod tidy
-   ```
+The application provides detailed error messages for:
+- Invalid date formats
+- Unsupported lottery types
+- Network failures
+- HTML parsing errors
+- Missing lottery data for specified dates
 
-2. Run the server:
-   ```bash
-   go run .
-   ```
+## CORS Support
 
-3. The server will start on port 8080
-
-## Notes
-
-- **Mega Millions**: Scrapes from the Previous Drawings page using MM/DD/YYYY date format
-- **Powerball**: Scrapes from the draw-result page using YYYY-MM-DD date format (automatically converted)
-- Date format must be exactly MM/DD/YYYY (e.g., "08/19/2025") for both lottery types
-- The scraper attempts to extract winning numbers, special ball numbers, and multipliers from the HTML content
-- Results may vary depending on the website structure and availability of data
-- Powerball scraping looks for Power Play multipliers (e.g., "4x") in the results
+The application includes CORS middleware to support cross-origin requests from web applications.

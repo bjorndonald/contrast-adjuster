@@ -1,29 +1,30 @@
 package main
 
-// Request payload structure
+// Request payload structure for contrast adjustment
 type ContrastRequest struct {
 	ImageData      string  `json:"image_data" binding:"required"`
 	ContrastFactor float64 `json:"contrast_factor" binding:"required"`
 }
 
-// Response payload structure
+// Response payload structure for contrast adjustment
 type ContrastResponse struct {
 	ProcessedImage string `json:"processed_image"`
 }
 
-// LotteryRequest represents the request payload for lottery number scraping
+// Request payload structure for lottery scraping
 type LotteryRequest struct {
-	Date     string `json:"date" binding:"required"`      // Date in format '08/19/2025'
-	Lottery  string `json:"lottery" binding:"required"`   // Type of lottery (e.g., "megamillions")
+	Date        string `json:"date" binding:"required"`        // Date in format '08/19/2025'
+	LotteryType string `json:"lottery_type" binding:"required"` // 'megamillions' or 'powerball'
 }
 
-// LotteryResponse represents the response payload for lottery number scraping
+// Response payload structure for lottery scraping
 type LotteryResponse struct {
-	Date         string   `json:"date"`                    // The date requested
-	Lottery      string   `json:"lottery"`                 // The lottery type
-	WinningNumbers []int  `json:"winning_numbers"`         // Array of winning numbers
-	MegaBall     *int     `json:"mega_ball,omitempty"`     // Mega ball number (if applicable)
-	Megaplier   *int     `json:"megaplier,omitempty"`     // Megaplier value (if applicable)
-	Success     bool     `json:"success"`                  // Whether the scraping was successful
-	Message     string   `json:"message"`                  // Success or error message
+	Date        string   `json:"date"`
+	LotteryType string   `json:"lottery_type"`
+	Numbers     []string `json:"numbers"`
+	PowerBall   string   `json:"power_ball,omitempty"`   // For Powerball
+	MegaBall    string   `json:"mega_ball,omitempty"`    // For Mega Millions
+	PowerPlay   string   `json:"power_play,omitempty"`   // For Powerball
+	Megaplier   string   `json:"megaplier,omitempty"`    // For Mega Millions
+	Error       string   `json:"error,omitempty"`
 }
