@@ -819,14 +819,68 @@ func determinePowerballMatchDescription(prize string) string {
 // parseMegaMillionsPrizeData parses prize information from Mega Millions API response
 // This function extracts prize tier information from the detailed draw data
 func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string) (*PrizeInfo, error) {
-	// For Mega Millions, we'll create a basic prize structure
-	// In a real implementation, you would parse the PrizeTiers data from the API response
+
+	// Extract the actual jackpot value from the API response
+	var jackpotValue string
+	if detailedData.Jackpot != nil {
+		// Convert the jackpot value to string, handling different possible types
+		switch v := detailedData.Jackpot.(type) {
+		case string:
+			jackpotValue = v
+		case float64:
+			if v >= 1000000 {
+				jackpotValue = fmt.Sprintf("$%.0f Million", v/1000000)
+			} else if v >= 1000 {
+				jackpotValue = fmt.Sprintf("$%.0f Thousand", v/1000)
+			} else {
+				jackpotValue = fmt.Sprintf("$%.0f", v)
+			}
+		case int:
+			if v >= 1000000 {
+				jackpotValue = fmt.Sprintf("$%d Million", v/1000000)
+			} else if v >= 1000 {
+				jackpotValue = fmt.Sprintf("$%d Thousand", v/1000)
+			} else {
+				jackpotValue = fmt.Sprintf("$%d", v)
+			}
+		case map[string]interface{}:
+			// Handle the case where Jackpot is a map with CurrentPrizePool
+			if currentPrizePool, ok := v["CurrentPrizePool"]; ok {
+				switch poolValue := currentPrizePool.(type) {
+				case float64:
+					if poolValue >= 1000000 {
+						jackpotValue = fmt.Sprintf("$%.0f Million", poolValue/1000000)
+					} else if poolValue >= 1000 {
+						jackpotValue = fmt.Sprintf("$%.0f Thousand", poolValue/1000)
+					} else {
+						jackpotValue = fmt.Sprintf("$%.0f", poolValue)
+					}
+				case int:
+					if poolValue >= 1000000 {
+						jackpotValue = fmt.Sprintf("$%d Million", poolValue/1000000)
+					} else if poolValue >= 1000 {
+						jackpotValue = fmt.Sprintf("$%d Thousand", poolValue/1000)
+					} else {
+						jackpotValue = fmt.Sprintf("$%d", poolValue)
+					}
+				default:
+					jackpotValue = fmt.Sprintf("%v", poolValue)
+				}
+			} else {
+				jackpotValue = "Unknown"
+			}
+		default:
+			jackpotValue = fmt.Sprintf("%v", v)
+		}
+	} else {
+		jackpotValue = "Unknown"
+	}
 
 	prizeTiers := []PrizeTier{
 		{
 			Match:               "5+1 (Jackpot)",
 			MegaMillionsWinners: 0,
-			MegaMillionsPrize:   "Jackpot",
+			MegaMillionsPrize:   jackpotValue,
 		},
 		{
 			Match:               "5+0",
@@ -870,11 +924,42 @@ func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string)
 		},
 	}
 
+	// Also extract cash value if available
+	var cashValue string
+	if detailedData.Jackpot != nil {
+		if jackpotMap, ok := detailedData.Jackpot.(map[string]interface{}); ok {
+			if currentCashValue, ok := jackpotMap["CurrentCashValue"]; ok {
+				switch cashVal := currentCashValue.(type) {
+				case float64:
+					if cashVal >= 1000000 {
+						cashValue = fmt.Sprintf("$%.1f Million", cashVal/1000000)
+					} else if cashVal >= 1000 {
+						cashValue = fmt.Sprintf("$%.0f Thousand", cashVal/1000)
+					} else {
+						cashValue = fmt.Sprintf("$%.0f", cashVal)
+					}
+				case int:
+					if cashVal >= 1000000 {
+						cashValue = fmt.Sprintf("$%.1f Million", float64(cashVal)/1000000)
+					} else if cashVal >= 1000 {
+						cashValue = fmt.Sprintf("$%.0f Thousand", cashVal/1000)
+					} else {
+						cashValue = fmt.Sprintf("$%d", cashVal)
+					}
+				default:
+					cashValue = fmt.Sprintf("%v", cashVal)
+				}
+			}
+		}
+	}
+
 	prizeInfo := &PrizeInfo{
-		PlayDate:    playDate,
-		PrizeTiers:  prizeTiers,
-		UpdatedBy:   "MEGAMILLIONS_API",
-		UpdatedTime: time.Now().Format("2006-01-02T15:04:05"),
+		PlayDate:         playDate,
+		EstimatedJackpot: jackpotValue,
+		CashValue:        cashValue,
+		PrizeTiers:       prizeTiers,
+		UpdatedBy:        "MEGAMILLIONS_API",
+		UpdatedTime:      time.Now().Format("2006-01-02T15:04:05"),
 	}
 
 	return prizeInfo, nil
