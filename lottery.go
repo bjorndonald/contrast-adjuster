@@ -19,7 +19,7 @@ func scrapeLotteryNumbers(date, lotteryType string) (*LotteryResponse, error) {
 
 	// Format date for URL construction
 	formattedDate := parsedDate.Format("01/02/2006")
-	
+
 	// Construct the appropriate URL based on lottery type
 	var url string
 	switch strings.ToLower(lotteryType) {
@@ -69,14 +69,17 @@ func scrapeLotteryNumbers(date, lotteryType string) (*LotteryResponse, error) {
 // extractMegaMillionsNumbers extracts winning numbers from Mega Millions HTML
 func extractMegaMillionsNumbers(doc *goquery.Document, date string) (*LotteryResponse, error) {
 	response := &LotteryResponse{}
-	
+
 	// Look for the drawing item that matches the date
 	// The date is displayed in the h5.drawItemDate element
 	drawItem := doc.Find("a.prevDrawItem").FilterFunction(func(i int, s *goquery.Selection) bool {
 		dateText := s.Find("h5.drawItemDate").Text()
-		return strings.TrimSpace(dateText) == date
+		// Normalize the date format by removing leading zeros
+		normalizedDate := strings.TrimLeft(date, "0")
+		normalizedDateText := strings.TrimLeft(strings.TrimSpace(dateText), "0")
+		return normalizedDateText == normalizedDate
 	})
-	
+
 	if drawItem.Length() == 0 {
 		return nil, fmt.Errorf("no drawing found for date: %s", date)
 	}
@@ -107,7 +110,7 @@ func extractMegaMillionsNumbers(doc *goquery.Document, date string) (*LotteryRes
 // extractPowerballNumbers extracts winning numbers from Powerball HTML
 func extractPowerballNumbers(doc *goquery.Document, date string) (*LotteryResponse, error) {
 	response := &LotteryResponse{}
-	
+
 	// Look for the white balls (first 5 numbers)
 	var numbers []string
 	doc.Find("div.white-balls.item-powerball").Each(func(i int, s *goquery.Selection) {
@@ -136,26 +139,26 @@ func validateLotteryRequest(req *LotteryRequest) error {
 	if req.Date == "" {
 		return fmt.Errorf("date is required")
 	}
-	
+
 	if req.LotteryType == "" {
 		return fmt.Errorf("lottery_type is required")
 	}
-	
+
 	// Validate lottery type
 	validTypes := map[string]bool{
 		"megamillions": true,
 		"powerball":    true,
 	}
-	
+
 	if !validTypes[strings.ToLower(req.LotteryType)] {
 		return fmt.Errorf("invalid lottery_type: %s. Supported types: megamillions, powerball", req.LotteryType)
 	}
-	
+
 	// Validate date format
 	_, err := time.Parse("01/02/2006", req.Date)
 	if err != nil {
 		return fmt.Errorf("invalid date format. Expected format: MM/DD/YYYY, got: %s", req.Date)
 	}
-	
+
 	return nil
 }
