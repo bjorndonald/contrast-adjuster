@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,25 +10,16 @@ import (
 func main() {
 	router := gin.Default()
 	
-	// Add CORS middleware for cross-origin requests
-	router.Use(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type")
-		
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		
-		c.Next()
-	})
-	
 	// Existing contrast adjustment route
 	router.POST("/adjust-contrast", adjustContrastHandler)
 	
-	// New lottery scraping route
-	router.POST("/lottery-numbers", lotteryNumbersHandler)
+	// New lottery winning numbers route
+	router.POST("/lottery-winning-numbers", lotteryWinningNumbersHandler)
+	
+	// Add a simple health check route
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "healthy", "message": "Lottery API is running"})
+	})
 	
 	router.Run(":8080")
 }
@@ -49,26 +41,32 @@ func adjustContrastHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, ContrastResponse{ProcessedImage: processedImage})
 }
 
-// lotteryNumbersHandler handles lottery number scraping requests
-func lotteryNumbersHandler(c *gin.Context) {
+// lotteryWinningNumbersHandler handles requests for lottery winning numbers
+// This handler processes POST requests to get winning numbers for a specific date and lottery type
+func lotteryWinningNumbersHandler(c *gin.Context) {
 	var req LotteryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("Invalid request format: %v", err),
+		})
 		return
 	}
 
-	// Validate the request
-	if err := validateLotteryRequest(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Scrape the lottery numbers
-	response, err := scrapeLotteryNumbers(req.Date, req.LotteryType)
+	// Get winning numbers for the specified date and lottery type
+	response, err := getLotteryWinningNumbers(req.Date, req.LotteryType)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("Internal server error: %v", err),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	// Return the response with appropriate HTTP status
+	if response.Success {
+		c.JSON(http.StatusOK, response)
+	} else {
+		c.JSON(http.StatusBadRequest, response)
+	}
 }
