@@ -578,6 +578,7 @@ func scrapePowerballPrizePage(url string) (*PrizeInfo, error) {
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
 
 	// Make the HTTP request
+	fmt.Printf("Scraping Powerball prize page: %s\n", url)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make HTTP request: %v", err)
@@ -614,8 +615,12 @@ func scrapePowerballPrizePage(url string) (*PrizeInfo, error) {
 		}
 	}
 
+	// Save HTML content to file for debugging (optional)
+	htmlContent := string(body)
+	// Debug file creation removed for production use
+
 	// Parse HTML to extract prize information
-	prizeInfo, err := parsePowerballPrizeHTML(string(body))
+	prizeInfo, err := parsePowerballPrizeHTML(htmlContent)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse Powerball prize HTML: %v", err)
 	}
@@ -626,13 +631,36 @@ func scrapePowerballPrizePage(url string) (*PrizeInfo, error) {
 // parsePowerballPrizeHTML parses the HTML content to extract prize information
 // This function uses regex patterns to find jackpot amounts, cash values, and prize tier data
 func parsePowerballPrizeHTML(htmlContent string) (*PrizeInfo, error) {
-	// Extract estimated jackpot
-	jackpotPattern := regexp.MustCompile(`<span class="prize-label">\s*Estimated Jackpot:\s*</span>\s*<span>([^<]+)</span>`)
-	jackpotMatches := jackpotPattern.FindStringSubmatch(htmlContent)
+	// Extract estimated jackpot - try multiple patterns to be more flexible
+	var jackpotMatches []string
+	jackpotPatterns := []*regexp.Regexp{
+		regexp.MustCompile(`<span class="prize-label">\s*Estimated Jackpot:\s*</span>\s*<span>([^<]+)</span>`),
+		regexp.MustCompile(`Estimated Jackpot[^<]*<[^>]*>([^<]+)</[^>]*>`),
+		regexp.MustCompile(`Jackpot[^<]*<[^>]*>([^<]+)</[^>]*>`),
+		regexp.MustCompile(`\$[\d,]+(?:\.\d{2})?\s*[Mm]illion`),
+	}
 
-	// Extract cash value
-	cashValuePattern := regexp.MustCompile(`<span class="prize-label">\s*Cash Value:\s*</span>\s*<span>([^<]+)</span>`)
-	cashValueMatches := cashValuePattern.FindStringSubmatch(htmlContent)
+	for _, pattern := range jackpotPatterns {
+		if matches := pattern.FindStringSubmatch(htmlContent); len(matches) > 0 {
+			jackpotMatches = matches
+			break
+		}
+	}
+
+	// Extract cash value - try multiple patterns to be more flexible
+	var cashValueMatches []string
+	cashValuePatterns := []*regexp.Regexp{
+		regexp.MustCompile(`<span class="prize-label">\s*Cash Value:\s*</span>\s*<span>([^<]+)</span>`),
+		regexp.MustCompile(`Cash Value[^<]*<[^>]*>([^<]+)</[^>]*>`),
+		regexp.MustCompile(`Cash[^<]*<[^>]*>([^<]+)</[^>]*>`),
+	}
+
+	for _, pattern := range cashValuePatterns {
+		if matches := pattern.FindStringSubmatch(htmlContent); len(matches) > 0 {
+			cashValueMatches = matches
+			break
+		}
+	}
 
 	// Extract date from the page
 	datePattern := regexp.MustCompile(`<h5 class="card-title mx-auto mb-3 lh-1 text-center  title-date">([^<]+)</h5>`)
@@ -688,38 +716,138 @@ func parsePowerballPrizeHTML(htmlContent string) (*PrizeInfo, error) {
 func extractPowerballPrizeTiers(htmlContent string) ([]PrizeTier, error) {
 	var prizeTiers []PrizeTier
 
-	// Pattern to match table rows with prize information
-	// This pattern looks for the structure: <td data-label="Powerball Winners">N</td><td data-label="Powerball Prize">$Amount</td>
-	// Updated pattern to be more flexible and match the actual HTML structure
-	rowPattern := regexp.MustCompile(`<td[^>]*data-label="Powerball Winners"[^>]*>\s*(\d+)\s*</td>\s*<td[^>]*data-label="Powerball Prize"[^>]*>\s*([^<]+)\s*</td>\s*<td[^>]*data-label="Power Play Winners"[^>]*>\s*(\d+)\s*</td>\s*<td[^>]*data-label="Power Play Prize"[^>]*>\s*([^<]+)\s*</td>`)
+	// Based on the actual HTML structure, we need to extract rows from the table
+	// Each row has 5 cells: Match, Powerball Winners, Powerball Prize, Power Play Winners, Power Play Prize
+
+	// Pattern to match table rows with the data-label attributes and extract the match pattern from CSS classes
+	rowPattern := regexp.MustCompile(`<tr>\s*<td[^>]*data-label="Match"[^>]*>.*?item-powerball\s+([^"\s]+)[^>]*>.*?</td>\s*<td[^>]*data-label="Powerball Winners"[^>]*>\s*(\d*)\s*</td>\s*<td[^>]*data-label="Powerball Prize"[^>]*>\s*([^<]+)\s*</td>\s*<td[^>]*data-label="Power Play Winners"[^>]*>\s*(\d*)\s*</td>\s*<td[^>]*data-label="Power Play Prize"[^>]*>\s*([^<]*)\s*</td>\s*</tr>`)
 	matches := rowPattern.FindAllStringSubmatch(htmlContent, -1)
 
-	// If the main pattern doesn't work, try a simpler approach
-	if len(matches) == 0 {
-		// Alternative pattern: look for the table structure more broadly
-		altPattern := regexp.MustCompile(`<td[^>]*>\s*(\d+)\s*</td>\s*<td[^>]*>\s*([^<]+)\s*</td>\s*<td[^>]*>\s*(\d+)\s*</td>\s*<td[^>]*>\s*([^<]+)\s*</td>`)
-		matches = altPattern.FindAllStringSubmatch(htmlContent, -1)
+	// Found prize tier rows with regex pattern
+
+	// If we found structured data with data-label attributes, use that
+	if len(matches) > 0 {
+		for _, match := range matches {
+			if len(match) >= 6 {
+				// Extract match pattern, winner counts and prizes
+				matchPattern := strings.TrimSpace(match[1])
+				powerballWinnersStr := strings.TrimSpace(match[2])
+				powerballPrize := strings.TrimSpace(match[3])
+				powerPlayWinnersStr := strings.TrimSpace(match[4])
+				powerPlayPrize := strings.TrimSpace(match[5])
+
+				// Parse winner counts (handle empty strings)
+				powerballWinners := 0
+				if powerballWinnersStr != "" {
+					if w, err := strconv.Atoi(powerballWinnersStr); err == nil {
+						powerballWinners = w
+					}
+				}
+
+				powerPlayWinners := 0
+				if powerPlayWinnersStr != "" {
+					if w, err := strconv.Atoi(powerPlayWinnersStr); err == nil {
+						powerPlayWinners = w
+					}
+				}
+
+				// Determine match description based on the CSS class pattern
+				matchDesc := determinePowerballMatchDescriptionFromPattern(matchPattern, powerballPrize)
+
+				prizeTier := PrizeTier{
+					Match:            matchDesc,
+					PowerballWinners: powerballWinners,
+					PowerballPrize:   powerballPrize,
+					PowerPlayWinners: powerPlayWinners,
+					PowerPlayPrize:   powerPlayPrize,
+				}
+
+				prizeTiers = append(prizeTiers, prizeTier)
+			}
+		}
 	}
 
-	for _, match := range matches {
-		if len(match) >= 5 {
-			powerballWinners, _ := strconv.Atoi(match[1])
-			powerballPrize := strings.TrimSpace(match[2])
-			powerPlayWinners, _ := strconv.Atoi(match[3])
-			powerPlayPrize := strings.TrimSpace(match[4])
+	// If we still don't have prize tiers, try a more flexible approach
+	if len(prizeTiers) == 0 {
 
-			// Determine match description based on prize amount
-			matchDesc := determinePowerballMatchDescription(powerballPrize)
+		// Look for table cells with data-label attributes more broadly
+		cellPattern := regexp.MustCompile(`<td[^>]*data-label="([^"]*)"[^>]*>\s*([^<]*)\s*</td>`)
+		cellMatches := cellPattern.FindAllStringSubmatch(htmlContent, -1)
 
-			prizeTier := PrizeTier{
-				Match:            matchDesc,
-				PowerballWinners: powerballWinners,
-				PowerballPrize:   powerballPrize,
-				PowerPlayWinners: powerPlayWinners,
-				PowerPlayPrize:   powerPlayPrize,
+		// Found cells with data-label attributes
+
+		// Group cells by their data-label
+		labelGroups := make(map[string][]string)
+		for _, match := range cellMatches {
+			if len(match) >= 3 {
+				label := strings.TrimSpace(match[1])
+				value := strings.TrimSpace(match[2])
+				labelGroups[label] = append(labelGroups[label], value)
 			}
+		}
 
-			prizeTiers = append(prizeTiers, prizeTier)
+		// Group cells by their data-label
+
+		// Try to extract prize tiers from the grouped data
+		if powerballWinners, ok := labelGroups["Powerball Winners"]; ok {
+			if powerballPrizes, ok2 := labelGroups["Powerball Prize"]; ok2 {
+				if powerPlayWinners, ok3 := labelGroups["Power Play Winners"]; ok3 {
+					if powerPlayPrizes, ok4 := labelGroups["Power Play Prize"]; ok4 {
+						// We have all the data we need
+						maxLen := len(powerballWinners)
+						if len(powerballPrizes) < maxLen {
+							maxLen = len(powerballPrizes)
+						}
+						if len(powerPlayWinners) < maxLen {
+							maxLen = len(powerPlayWinners)
+						}
+						if len(powerPlayPrizes) < maxLen {
+							maxLen = len(powerPlayPrizes)
+						}
+
+						// Creating prize tiers from grouped data
+
+						for i := 0; i < maxLen; i++ {
+							// Parse winner counts (handle empty strings)
+							powerballWinnersCount := 0
+							if i < len(powerballWinners) && powerballWinners[i] != "" {
+								if w, err := strconv.Atoi(powerballWinners[i]); err == nil {
+									powerballWinnersCount = w
+								}
+							}
+
+							powerPlayWinnersCount := 0
+							if i < len(powerPlayWinners) && powerPlayWinners[i] != "" {
+								if w, err := strconv.Atoi(powerPlayWinners[i]); err == nil {
+									powerPlayWinnersCount = w
+								}
+							}
+
+							prize := ""
+							if i < len(powerballPrizes) {
+								prize = strings.TrimSpace(powerballPrizes[i])
+							}
+
+							ppPrize := ""
+							if i < len(powerPlayPrizes) {
+								ppPrize = strings.TrimSpace(powerPlayPrizes[i])
+							}
+
+							matchDesc := determinePowerballMatchDescription(prize)
+
+							prizeTier := PrizeTier{
+								Match:            matchDesc,
+								PowerballWinners: powerballWinnersCount,
+								PowerballPrize:   prize,
+								PowerPlayWinners: powerPlayWinnersCount,
+								PowerPlayPrize:   ppPrize,
+							}
+
+							prizeTiers = append(prizeTiers, prizeTier)
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -813,6 +941,40 @@ func determinePowerballMatchDescription(prize string) string {
 		return "1+1 or 0+1"
 	default:
 		return "Unknown Match"
+	}
+}
+
+// determinePowerballMatchDescriptionFromPattern determines the match description based on the CSS class pattern
+// This function maps CSS class patterns to specific match descriptions for Powerball
+func determinePowerballMatchDescriptionFromPattern(pattern, prize string) string {
+	switch pattern {
+	case "m5-pb":
+		return "5+1 (Jackpot)"
+	case "m5":
+		return "5+0"
+	case "m4-pb":
+		return "4+1"
+	case "m4":
+		return "4+0"
+	case "m3-pb":
+		return "3+1"
+	case "m3":
+		return "3+0"
+	case "m2-pb":
+		return "2+1"
+	case "m2":
+		return "2+0"
+	case "m1-pb":
+		return "1+1"
+	case "m1":
+		return "1+0"
+	case "m0-pb":
+		return "0+1"
+	case "m0":
+		return "0+0"
+	default:
+		// Fallback to prize-based description if pattern is not recognized
+		return determinePowerballMatchDescription(prize)
 	}
 }
 
