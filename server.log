@@ -85,10 +85,13 @@ Result: $2 Million ($2000000.00)
 [GIN-debug] POST   /lottery-winning-numbers  --> main.lotteryWinningNumbersHandler (3 handlers)
 [GIN-debug] POST   /lottery-prize-amounts    --> main.lotteryPrizeAmountsHandler (3 handlers)
 [GIN-debug] GET    /powerball-demo           --> main.powerballDemoHandler (3 handlers)
+[GIN-debug] GET    /megamillions-demo        --> main.megaMillionsDemoHandler (3 handlers)
 [GIN-debug] POST   /check-powerball-ticket   --> main.checkPowerballTicketHandler (3 handlers)
+[GIN-debug] POST   /check-megamillions-ticket --> main.checkMegaMillionsTicketHandler (3 handlers)
 [GIN-debug] GET    /health                   --> main.main.func1 (3 handlers)
 [GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
 Please check https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-proxies for details.
 [GIN-debug] Listening and serving HTTP on :8080
-[GIN] 2025/08/29 - 17:52:53 | 200 |  2.400359333s |             ::1 | POST     "/lottery-winning-numbers"
-[GIN] 2025/08/29 - 17:53:03 | 200 |  791.267666ms |             ::1 | POST     "/lottery-winning-numbers"
+[GIN] 2025/08/29 - 20:36:25 | 200 |      873.75µs |             ::1 | GET      "/powerball-demo"
+Scraping Powerball prize page: https://www.powerball.com/draw-result?gc=powerball&date=2025-08-27&oc=fl
+[GIN] 2025/08/29 - 20:36:45 | 200 |  3.008551917s |             ::1 | POST     "/lottery-prize-amounts"

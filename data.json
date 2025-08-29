@@ -1,0 +1,32 @@
+{
+    "model": "gpt-4o-mini",
+    "temperature": 0,
+    "response_format": { "type": "json_object" },
+    "messages": [
+      {
+        "role": "system",
+        "content": [
+          {
+            "type": "text",
+            "text": "You are a precise data extractor. Return a single JSON object in the required schema. Identify whether the ticket is Powerball or Mega Millions (even with misspellings). Normalize draw dates to YYYY-MM-DD. Detect Power Play and Double Play on Powerball tickets. The multiplier is usually the number like 2x which is usually beside a row. It should be returned as an array"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Extract fields from the lottery receipt image and return exactly this JSON:\n{\n \"ticket_type\": \"powerball | megamillions\",\n  \"draw_date\": \"YYYY-MM-DD\",\n  \"numbers\": \"array of arrays with  each line numbers like so [[\"a1\",\"a2\",\"a3\",\"a4\",\"a5\"], [\"b1\",\"b2\",\"b3\",\"b4\",\"b5\"]]\",\n  \"pb\": \"an array of all the pb numbers on each line [\"p1\",\"p2\"] have it be an empty array if there is nothing\",\n  \"mb\": \"An arrays of all the mb numbers on each line [\"m1\",\"m2\"] have it be an empty array if there is nothing\",\n  \"powerplay\": boolean,\n  \"double_play\": boolean\n, \"multipliers\": \n \"array of the different multipliers let it be an empty array if none\"\n}\nRules:\n- Only one of pb/mb may be present; omit the other.\n- Recognize synonyms like power ball, mega million, money ball, PB, MM.\n- If the date is in another format, convert to YYYY-MM-DD.\n- If truly missing, use empty string for draw_date, empty array for numbers, false for booleans.\n- No extra keys or commentary. Please for the powerball tickets if the double play is followed by a NO, the double_play should be false. Same for the power_play"
+          },
+          {
+    "type": "image_url",
+    "image_url": {
+      "url": "{{$json.processed_image}}"
+    }
+  }
+        ]
+      }
+    ]
+  }
+  

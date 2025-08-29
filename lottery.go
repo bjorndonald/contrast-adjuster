@@ -855,65 +855,65 @@ func extractPowerballPrizeTiers(htmlContent string) ([]PrizeTier, error) {
 			{
 				Match:            "5+1 (Jackpot)",
 				PowerballWinners: 0,
-				PowerballPrize:   "Grand Prize",
+				PowerballPrize:   "Jackpot",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "",
+				PowerPlayPrize:   "2x: Jackpot, 3x: Jackpot, 4x: Jackpot, 5x: Jackpot, 10x: Jackpot",
 			},
 			{
 				Match:            "5+0",
 				PowerballWinners: 0,
 				PowerballPrize:   "$1,000,000",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$2,000,000",
+				PowerPlayPrize:   "2x: $2,000,000, 3x: $3,000,000, 4x: $4,000,000, 5x: $5,000,000, 10x: $10,000,000",
 			},
 			{
 				Match:            "4+1",
 				PowerballWinners: 0,
 				PowerballPrize:   "$50,000",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$100,000",
+				PowerPlayPrize:   "2x: $100,000, 3x: $150,000, 4x: $200,000, 5x: $250,000, 10x: $500,000",
 			},
 			{
 				Match:            "4+0",
 				PowerballWinners: 0,
 				PowerballPrize:   "$100",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$200",
+				PowerPlayPrize:   "2x: $200, 3x: $300, 4x: $400, 5x: $500, 10x: $1,000",
 			},
 			{
 				Match:            "3+1",
 				PowerballWinners: 0,
 				PowerballPrize:   "$100",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$200",
+				PowerPlayPrize:   "2x: $200, 3x: $300, 4x: $400, 5x: $500, 10x: $1,000",
 			},
 			{
 				Match:            "3+0",
 				PowerballWinners: 0,
 				PowerballPrize:   "$7",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$14",
+				PowerPlayPrize:   "2x: $14, 3x: $21, 4x: $28, 5x: $35, 10x: $70",
 			},
 			{
 				Match:            "2+1",
 				PowerballWinners: 0,
 				PowerballPrize:   "$7",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$14",
+				PowerPlayPrize:   "2x: $14, 3x: $21, 4x: $28, 5x: $35, 10x: $70",
 			},
 			{
 				Match:            "1+1",
 				PowerballWinners: 0,
 				PowerballPrize:   "$4",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$16",
+				PowerPlayPrize:   "2x: $8, 3x: $12, 4x: $16, 5x: $20, 10x: $40",
 			},
 			{
 				Match:            "0+1",
 				PowerballWinners: 0,
 				PowerballPrize:   "$4",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$16",
+				PowerPlayPrize:   "2x: $8, 3x: $12, 4x: $16, 5x: $20, 10x: $40",
 			},
 		}
 	}
@@ -1041,46 +1041,55 @@ func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string)
 			Match:               "5+1 (Jackpot)",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   jackpotValue,
+			MegaplierPrize:      "Jackpot", // All multipliers result in Jackpot
 		},
 		{
 			Match:               "5+0",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$1,000,000",
+			MegaplierPrize:      "$2,000,000 (2x), $3,000,000 (3x), $4,000,000 (4x), $5,000,000 (5x), $10,000,000 (10x)",
 		},
 		{
 			Match:               "4+1",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$10,000",
+			MegaplierPrize:      "$20,000 (2x), $30,000 (3x), $40,000 (4x), $50,000 (5x), $100,000 (10x)",
 		},
 		{
 			Match:               "4+0",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$500",
+			MegaplierPrize:      "$1,000 (2x), $1,500 (3x), $2,000 (4x), $2,500 (5x), $5,000 (10x)",
 		},
 		{
 			Match:               "3+1",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$200",
+			MegaplierPrize:      "$400 (2x), $600 (3x), $800 (4x), $1,000 (5x), $2,000 (10x)",
 		},
 		{
 			Match:               "3+0",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$10",
+			MegaplierPrize:      "$20 (2x), $30 (3x), $40 (4x), $50 (5x), $100 (10x)",
 		},
 		{
 			Match:               "2+1",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$10",
+			MegaplierPrize:      "$20 (2x), $30 (3x), $40 (4x), $50 (5x), $100 (10x)",
 		},
 		{
 			Match:               "1+1",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$4",
+			MegaplierPrize:      "$14 (2x), $21 (3x), $28 (4x), $35 (5x), $70 (10x)",
 		},
 		{
 			Match:               "0+1",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$2",
+			MegaplierPrize:      "$10 (2x), $15 (3x), $20 (4x), $25 (5x), $50 (10x)",
 		},
 	}
 
@@ -1427,3 +1436,128 @@ func demonstratePowerballPrizes() {
 
 // demonstratePowerballPrizes can be called from main.go to show the Powerball prize calculation system
 // This function demonstrates different ticket combinations and their prizes
+
+// calculateMegaMillionsPrize calculates the prize amount for a given number of matching balls and Mega Ball
+// This function implements the static prize tier structure for Mega Millions
+func calculateMegaMillionsPrize(whiteBallMatches int, hasMegaBall bool, estimatedJackpot string) (string, int) {
+	// Define the static prize tiers based on Mega Millions rules
+	// Format: (whiteBallMatches, hasMegaBall) -> (prize description, base amount in cents)
+	prizeTiers := map[string]struct {
+		description string
+		baseAmount  int // in cents
+	}{
+		"5+1": {estimatedJackpot, 0},     // Jackpot amount varies
+		"5+0": {"$1,000,000", 100000000}, // $1,000,000
+		"4+1": {"$10,000", 1000000},      // $10,000
+		"4+0": {"$500", 50000},           // $500
+		"3+1": {"$200", 20000},           // $200
+		"3+0": {"$10", 1000},             // $10
+		"2+1": {"$10", 1000},             // $10
+		"2+0": {"$0", 0},                 // No prize
+		"1+1": {"$4", 400},               // $4
+		"1+0": {"$0", 0},                 // No prize
+		"0+1": {"$2", 200},               // $2
+		"0+0": {"$0", 0},                 // No prize
+	}
+
+	// Create the key for the prize tier
+	key := fmt.Sprintf("%d+%d", whiteBallMatches, boolToInt(hasMegaBall))
+
+	// Get the prize information
+	if prizeInfo, exists := prizeTiers[key]; exists {
+		return prizeInfo.description, prizeInfo.baseAmount
+	}
+
+	// Default case for invalid combinations
+	return "No Prize", 0
+}
+
+// calculateMegaplierPrize calculates the Megaplier prize amount based on the base prize and multiplier
+// This function applies the Megaplier multiplier to the base prize amount
+func calculateMegaplierPrize(baseAmount int, multiplier int) (string, int) {
+	// Megaplier multipliers: 2x, 3x, 4x, 5x, 10x
+	// All Megaplier multipliers apply to all prizes (unlike Power Play)
+
+	// Calculate the Megaplier prize
+	megaplierAmount := baseAmount * multiplier
+
+	// Format the prize amount
+	var formattedPrize string
+	if megaplierAmount >= 100000000 { // $1,000,000 or more
+		formattedPrize = fmt.Sprintf("$%d Million", megaplierAmount/100000000)
+	} else if megaplierAmount >= 1000000 { // $1,000,000
+		formattedPrize = fmt.Sprintf("$%d", megaplierAmount/100)
+	} else if megaplierAmount >= 100000 { // $100,000 or more
+		formattedPrize = fmt.Sprintf("$%d", megaplierAmount/100)
+	} else if megaplierAmount >= 10000 { // $100 or more
+		formattedPrize = fmt.Sprintf("$%d", megaplierAmount/100)
+	} else if megaplierAmount >= 100 { // $1 or more
+		formattedPrize = fmt.Sprintf("$%d", megaplierAmount/100)
+	} else {
+		formattedPrize = "$0"
+	}
+
+	return formattedPrize, megaplierAmount
+}
+
+// checkMegaMillionsTicket checks if a Mega Millions ticket is a winner and calculates the prize
+// This function compares the ticket numbers with the winning numbers and determines the prize
+func checkMegaMillionsTicket(ticketNumbers []int, megaBallNumber int, winningNumbers *WinningNumbers, megaplierMultiplier int) (*TicketResult, error) {
+	// Validate ticket input
+	if len(ticketNumbers) != 5 {
+		return nil, fmt.Errorf("invalid ticket: must have exactly 5 white ball numbers")
+	}
+
+	if megaBallNumber < 1 || megaBallNumber > 25 {
+		return nil, fmt.Errorf("invalid Mega Ball number: must be between 1 and 25")
+	}
+
+	// Validate winning numbers
+	if winningNumbers == nil {
+		return nil, fmt.Errorf("winning numbers cannot be nil")
+	}
+
+	// Extract winning numbers
+	winningWhiteBalls := []int{winningNumbers.N1, winningNumbers.N2, winningNumbers.N3, winningNumbers.N4, winningNumbers.N5}
+	winningMegaBall := winningNumbers.MBall
+
+	// Count matching white balls
+	whiteBallMatches := countMatchingNumbers(ticketNumbers, winningWhiteBalls)
+
+	// Check if Mega Ball matches
+	hasMegaBall := (megaBallNumber == winningMegaBall)
+
+	// Calculate base prize using a default estimated jackpot
+	estimatedJackpot := "$500 Million" // This would come from the lottery data in a real implementation
+	prizeDescription, baseAmount := calculateMegaMillionsPrize(whiteBallMatches, hasMegaBall, estimatedJackpot)
+
+	// Calculate Megaplier prize if multiplier is provided
+	var megaplierPrize string
+	var megaplierAmount int
+	if megaplierMultiplier > 0 {
+		megaplierPrize, megaplierAmount = calculateMegaplierPrize(baseAmount, megaplierMultiplier)
+	}
+
+	// Determine if ticket is a winner
+	isWinner := baseAmount > 0 || (whiteBallMatches == 5 && hasMegaBall) // Jackpot is always a winner
+
+	// Create ticket result
+	result := &TicketResult{
+		IsWinner:            isWinner,
+		WhiteBallMatches:    whiteBallMatches,
+		HasPowerball:        hasMegaBall, // Reusing Powerball field for Mega Ball
+		PrizeDescription:    prizeDescription,
+		BasePrize:           baseAmount,
+		PowerPlayMultiplier: megaplierMultiplier, // Reusing Power Play field for Megaplier
+		PowerPlayPrize:      megaplierPrize,
+		PowerPlayAmount:     megaplierAmount,
+		TotalPrize:          baseAmount,
+	}
+
+	// If Megaplier is active, use the Megaplier amount as total
+	if megaplierMultiplier > 0 {
+		result.TotalPrize = megaplierAmount
+	}
+
+	return result, nil
+}
