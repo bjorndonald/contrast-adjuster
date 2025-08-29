@@ -92,6 +92,4 @@ Result: $2 Million ($2000000.00)
 [GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
 Please check https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-proxies for details.
 [GIN-debug] Listening and serving HTTP on :8080
-[GIN] 2025/08/29 - 20:36:25 | 200 |      873.75µs |             ::1 | GET      "/powerball-demo"
-Scraping Powerball prize page: https://www.powerball.com/draw-result?gc=powerball&date=2025-08-27&oc=fl
-[GIN] 2025/08/29 - 20:36:45 | 200 |  3.008551917s |             ::1 | POST     "/lottery-prize-amounts"
+[GIN] 2025/08/29 - 21:10:36 | 200 |   5.64235275s |             ::1 | POST     "/lottery-prize-amounts"

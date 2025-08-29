@@ -105,13 +105,13 @@ type PrizeInfo struct {
 
 // Structure for individual prize tiers
 type PrizeTier struct {
-	Match               string `json:"match"`                          // Match description (e.g., "5+1", "5+0", "4+1")
-	PowerballWinners    int    `json:"powerball_winners,omitempty"`    // Number of winners without Power Play
-	PowerballPrize      string `json:"powerball_prize,omitempty"`      // Prize amount without Power Play
-	PowerPlayWinners    int    `json:"power_play_winners,omitempty"`   // Number of winners with Power Play
-	PowerPlayPrize      string `json:"power_play_prize,omitempty"`     // Prize amount with Power Play
-	MegaMillionsWinners int    `json:"megamillions_winners,omitempty"` // Number of Mega Millions winners
-	MegaMillionsPrize   string `json:"megamillions_prize,omitempty"`   // Mega Millions prize amount
-	MegaplierWinners    int    `json:"megaplier_winners,omitempty"`    // Number of winners with Megaplier
-	MegaplierPrize      string `json:"megaplier_prize,omitempty"`      // Prize amount with Megaplier
+	Match               string         `json:"match"`                          // Match description (e.g., "5+1", "5+0", "4+1")
+	PowerballWinners    int            `json:"powerball_winners,omitempty"`    // Number of winners without Power Play
+	PowerballPrize      string         `json:"powerball_prize,omitempty"`      // Prize amount without Power Play
+	PowerPlayWinners    int            `json:"power_play_winners,omitempty"`   // Number of winners with Power Play
+	PowerPlayPrize      string         `json:"power_play_prize,omitempty"`     // Prize amount with Power Play
+	MegaMillionsWinners int            `json:"megamillions_winners,omitempty"` // Number of Mega Millions winners
+	MegaMillionsPrize   string         `json:"megamillions_prize,omitempty"`   // Mega Millions prize amount
+	MegaplierWinners    int            `json:"megaplier_winners,omitempty"`    // Number of winners with Megaplier
+	MegaplierPrize      map[string]int `json:"megaplier_prize,omitempty"`      // Prize amounts with all multipliers (2x, 3x, 4x, 5x, 10x)
 }

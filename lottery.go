@@ -1041,55 +1041,55 @@ func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string)
 			Match:               "5+1 (Jackpot)",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   jackpotValue,
-			MegaplierPrize:      "Jackpot", // All multipliers result in Jackpot
+			MegaplierPrize:      map[string]int{"2x": 0, "3x": 0, "4x": 0, "5x": 0, "10x": 0}, // All multipliers result in Jackpot (0 represents Jackpot)
 		},
 		{
 			Match:               "5+0",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$1,000,000",
-			MegaplierPrize:      "$2,000,000 (2x), $3,000,000 (3x), $4,000,000 (4x), $5,000,000 (5x), $10,000,000 (10x)",
+			MegaplierPrize:      map[string]int{"2x": 2000000, "3x": 3000000, "4x": 4000000, "5x": 5000000, "10x": 10000000},
 		},
 		{
 			Match:               "4+1",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$10,000",
-			MegaplierPrize:      "$20,000 (2x), $30,000 (3x), $40,000 (4x), $50,000 (5x), $100,000 (10x)",
+			MegaplierPrize:      map[string]int{"2x": 20000, "3x": 30000, "4x": 40000, "5x": 50000, "10x": 100000},
 		},
 		{
 			Match:               "4+0",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$500",
-			MegaplierPrize:      "$1,000 (2x), $1,500 (3x), $2,000 (4x), $2,500 (5x), $5,000 (10x)",
+			MegaplierPrize:      map[string]int{"2x": 1000, "3x": 1500, "4x": 2000, "5x": 2500, "10x": 5000},
 		},
 		{
 			Match:               "3+1",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$200",
-			MegaplierPrize:      "$400 (2x), $600 (3x), $800 (4x), $1,000 (5x), $2,000 (10x)",
+			MegaplierPrize:      map[string]int{"2x": 400, "3x": 600, "4x": 800, "5x": 1000, "10x": 2000},
 		},
 		{
 			Match:               "3+0",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$10",
-			MegaplierPrize:      "$20 (2x), $30 (3x), $40 (4x), $50 (5x), $100 (10x)",
+			MegaplierPrize:      map[string]int{"2x": 20, "3x": 30, "4x": 40, "5x": 50, "10x": 100},
 		},
 		{
 			Match:               "2+1",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$10",
-			MegaplierPrize:      "$20 (2x), $30 (3x), $40 (4x), $50 (5x), $100 (10x)",
+			MegaplierPrize:      map[string]int{"2x": 20, "3x": 30, "4x": 40, "5x": 50, "10x": 100},
 		},
 		{
 			Match:               "1+1",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$4",
-			MegaplierPrize:      "$14 (2x), $21 (3x), $28 (4x), $35 (5x), $70 (10x)",
+			MegaplierPrize:      map[string]int{"2x": 14, "3x": 21, "4x": 28, "5x": 35, "10x": 70},
 		},
 		{
 			Match:               "0+1",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   "$2",
-			MegaplierPrize:      "$10 (2x), $15 (3x), $20 (4x), $25 (5x), $50 (10x)",
+			MegaplierPrize:      map[string]int{"2x": 10, "3x": 15, "4x": 20, "5x": 25, "10x": 50},
 		},
 	}
 
