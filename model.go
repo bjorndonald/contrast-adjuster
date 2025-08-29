@@ -24,6 +24,7 @@ type LotteryResponse struct {
 	LotteryType    string          `json:"lottery_type"`
 	WinningNumbers *WinningNumbers `json:"winning_numbers,omitempty"`
 	Error          string          `json:"error,omitempty"`
+	Message        string          `json:"message,omitempty"`
 }
 
 // Structure to hold winning numbers data
