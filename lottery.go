@@ -982,12 +982,25 @@ func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string)
 
 	// Extract the actual jackpot value from the API response
 	var jackpotValue string
+	var jackpotNumericValue int64
 	if detailedData.Jackpot != nil {
 		// Convert the jackpot value to string, handling different possible types
 		switch v := detailedData.Jackpot.(type) {
 		case string:
 			jackpotValue = v
+			// Try to extract numeric value from string (e.g., "$253 Million" -> 253000000)
+			if strings.Contains(strings.ToLower(v), "million") {
+				if strings.Contains(v, "$") {
+					parts := strings.Split(v, "$")
+					if len(parts) > 1 {
+						if num, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64); err == nil {
+							jackpotNumericValue = int64(num * 1000000)
+						}
+					}
+				}
+			}
 		case float64:
+			jackpotNumericValue = int64(v)
 			if v >= 1000000 {
 				jackpotValue = fmt.Sprintf("$%.0f Million", v/1000000)
 			} else if v >= 1000 {
@@ -996,6 +1009,7 @@ func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string)
 				jackpotValue = fmt.Sprintf("$%.0f", v)
 			}
 		case int:
+			jackpotNumericValue = int64(v)
 			if v >= 1000000 {
 				jackpotValue = fmt.Sprintf("$%d Million", v/1000000)
 			} else if v >= 1000 {
@@ -1008,6 +1022,7 @@ func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string)
 			if currentPrizePool, ok := v["CurrentPrizePool"]; ok {
 				switch poolValue := currentPrizePool.(type) {
 				case float64:
+					jackpotNumericValue = int64(poolValue)
 					if poolValue >= 1000000 {
 						jackpotValue = fmt.Sprintf("$%.0f Million", poolValue/1000000)
 					} else if poolValue >= 1000 {
@@ -1016,6 +1031,7 @@ func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string)
 						jackpotValue = fmt.Sprintf("$%.0f", poolValue)
 					}
 				case int:
+					jackpotNumericValue = int64(poolValue)
 					if poolValue >= 1000000 {
 						jackpotValue = fmt.Sprintf("$%d Million", poolValue/1000000)
 					} else if poolValue >= 1000 {
@@ -1041,7 +1057,7 @@ func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string)
 			Match:               "5+1 (Jackpot)",
 			MegaMillionsWinners: 0,
 			MegaMillionsPrize:   jackpotValue,
-			MegaplierPrize:      map[string]int{"2x": 0, "3x": 0, "4x": 0, "5x": 0, "10x": 0}, // All multipliers result in Jackpot (0 represents Jackpot)
+			MegaplierPrize:      map[string]int{"2x": int(jackpotNumericValue), "3x": int(jackpotNumericValue), "4x": int(jackpotNumericValue), "5x": int(jackpotNumericValue), "10x": int(jackpotNumericValue)}, // All multipliers result in Jackpot
 		},
 		{
 			Match:               "5+0",
