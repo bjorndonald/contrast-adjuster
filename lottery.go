@@ -133,30 +133,21 @@ func getMegaMillionsWinningNumbers(date string, parsedDate time.Time) (*LotteryR
 // getPowerballWinningNumbers retrieves winning numbers for Powerball by scraping the website
 // This function scrapes the Powerball draw result page for a specific date
 func getPowerballWinningNumbers(date string, parsedDate time.Time) (*LotteryResponse, error) {
-	// Check if we should use mock data (for testing and demonstration)
-	// In a real implementation, this could be controlled by an environment variable or query parameter
-	useMockData := true // Set to false to use real scraping
-
-	if useMockData {
-		return getMockPowerballWinningNumbers(date), nil
-	}
-
-	// Powerball drawings are held on Monday, Wednesday, and Saturday
-	// Find the most recent drawing date that is on or before the requested date
-	drawingDate := getLastPowerballDrawingDate(parsedDate)
-
 	// Format date for Powerball URL (YYYY-MM-DD)
-	formattedDate := drawingDate.Format("2006-01-02")
+	formattedDate := parsedDate.Format("2006-01-02")
 
 	// Construct the Powerball URL
 	powerballURL := fmt.Sprintf("https://www.powerball.com/draw-result?gc=powerball&date=%s&oc=fl", formattedDate)
 
-	// Try to scrape the Powerball page first
+	// Scrape the Powerball page
 	winningNumbers, err := scrapePowerballPage(powerballURL)
 	if err != nil {
-		// If scraping fails, fall back to mock data for consistent testing
-		fmt.Printf("Powerball scraping failed for %s: %v. Using mock data instead.\n", formattedDate, err)
-		return getMockPowerballWinningNumbers(date), nil
+		return &LotteryResponse{
+			Success:     false,
+			Date:        date,
+			LotteryType: "powerball",
+			Error:       fmt.Sprintf("Failed to scrape Powerball data: %v", err),
+		}, nil
 	}
 
 	return &LotteryResponse{
@@ -164,68 +155,7 @@ func getPowerballWinningNumbers(date string, parsedDate time.Time) (*LotteryResp
 		Date:           date,
 		LotteryType:    "powerball",
 		WinningNumbers: winningNumbers,
-		Message:        fmt.Sprintf("Showing results for Powerball drawing on %s", formattedDate),
 	}, nil
-}
-
-// getLastPowerballDrawingDate finds the most recent Powerball drawing date
-// Powerball drawings are held on Monday, Wednesday, and Saturday
-func getLastPowerballDrawingDate(requestedDate time.Time) time.Time {
-	// Powerball drawing days: Monday (1), Wednesday (3), Saturday (6)
-	drawingDays := []int{1, 3, 6}
-
-	// Start from the requested date and go backwards to find the last drawing
-	currentDate := requestedDate
-	for {
-		weekday := int(currentDate.Weekday())
-		if weekday == 0 { // Sunday
-			weekday = 7
-		}
-
-		// Check if this is a drawing day
-		for _, drawingDay := range drawingDays {
-			if weekday == drawingDay {
-				return currentDate
-			}
-		}
-
-		// Go back one day
-		currentDate = currentDate.AddDate(0, 0, -1)
-
-		// Safety check to prevent infinite loop
-		if currentDate.Before(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)) {
-			break
-		}
-	}
-
-	// Fallback to the requested date if no drawing day found
-	return requestedDate
-}
-
-// getMockPowerballWinningNumbers provides consistent mock winning numbers for testing
-// This function returns the same numbers used in our test examples
-func getMockPowerballWinningNumbers(date string) *LotteryResponse {
-	// Use the same winning numbers from our test examples for consistency
-	mockWinningNumbers := &WinningNumbers{
-		PlayDate:    date,
-		N1:          10,
-		N2:          20,
-		N3:          30,
-		N4:          40,
-		N5:          50,
-		MBall:       25, // Powerball number
-		Megaplier:   2,  // Power Play multiplier
-		UpdatedBy:   "MOCK_DATA",
-		UpdatedTime: time.Now().Format("2006-01-02T15:04:05"),
-	}
-
-	return &LotteryResponse{
-		Success:        true,
-		Date:           date,
-		LotteryType:    "powerball",
-		WinningNumbers: mockWinningNumbers,
-		Message:        "Using mock data for demonstration purposes",
-	}
 }
 
 // scrapePowerballPage scrapes the Powerball draw result page to extract winning numbers
