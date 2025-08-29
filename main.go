@@ -123,7 +123,7 @@ func powerballDemoHandler(c *gin.Context) {
 		"prize_tiers": []gin.H{
 			{"match": "5 white balls + Powerball", "prize": "Jackpot (varies)", "power_play_example": "2x = $2,000,000"},
 			{"match": "5 white balls (no Powerball)", "prize": "$1,000,000", "power_play_example": "2x = $2,000,000"},
-			{"match": "4 white balls + Powerball", "prize": "$50,000", "power_play_example": "2x = $100,000"},
+			{"match": "4 white balls + Powerball", "prize": "$50,000", "power_play_example": "4x = $200,000"},
 			{"match": "4 white balls (no Powerball)", "prize": "$100", "power_play_example": "2x = $200"},
 			{"match": "3 white balls + Powerball", "prize": "$100", "power_play_example": "2x = $200"},
 			{"match": "3 white balls (no Powerball)", "prize": "$7", "power_play_example": "2x = $14"},
@@ -204,11 +204,14 @@ func checkPowerballTicketHandler(c *gin.Context) {
 	}
 
 	// Check the ticket
+	// For now, use a default estimated jackpot since we don't have it from the winning numbers
+	estimatedJackpot := "$500 Million" // This would come from the lottery data in a real implementation
 	ticketResult, err := checkPowerballTicket(
 		req.WhiteBallNumbers,
 		req.PowerballNumber,
 		winningNumbersResponse.WinningNumbers,
 		req.PowerPlayMultiplier,
+		estimatedJackpot,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

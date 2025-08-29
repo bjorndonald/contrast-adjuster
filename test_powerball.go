@@ -46,7 +46,7 @@ func testPowerballPrizes() {
 		fmt.Printf("Numbers: %v | Powerball: %d\n", ticket.whiteBalls, ticket.powerball)
 
 		// Check without Power Play
-		result, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 0)
+		result, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 0, "$500 Million")
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		} else {
@@ -59,7 +59,7 @@ func testPowerballPrizes() {
 		}
 
 		// Check with Power Play (2x multiplier)
-		resultPP, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 2)
+		resultPP, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 2, "$500 Million")
 		if err != nil {
 			fmt.Printf("Power Play Error: %v\n", err)
 		} else if resultPP.PowerPlayMultiplier > 0 {

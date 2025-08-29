@@ -1127,25 +1127,25 @@ func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string)
 
 // calculatePowerballPrize calculates the prize amount for a given number of matching balls and Powerball
 // This function implements the static prize tier structure for Powerball
-func calculatePowerballPrize(whiteBallMatches int, hasPowerball bool) (string, int) {
+func calculatePowerballPrize(whiteBallMatches int, hasPowerball bool, estimatedJackpot string) (string, int) {
 	// Define the static prize tiers based on Powerball rules
 	// Format: (whiteBallMatches, hasPowerball) -> (prize description, base amount in cents)
 	prizeTiers := map[string]struct {
 		description string
 		baseAmount  int // in cents
 	}{
-		"5+1": {"Grand Prize (Jackpot)", 0}, // Jackpot amount varies
-		"5+0": {"$1,000,000", 100000000},    // $1,000,000
-		"4+1": {"$50,000", 5000000},         // $50,000
-		"4+0": {"$100", 10000},              // $100
-		"3+1": {"$100", 10000},              // $100
-		"3+0": {"$7", 700},                  // $7
-		"2+1": {"$7", 700},                  // $7
-		"2+0": {"$0", 0},                    // No prize
-		"1+1": {"$4", 400},                  // $4
-		"1+0": {"$0", 0},                    // No prize
-		"0+1": {"$4", 400},                  // $4
-		"0+0": {"$0", 0},                    // No prize
+		"5+1": {estimatedJackpot, 0},     // Use estimated jackpot value
+		"5+0": {"$1,000,000", 100000000}, // $1,000,000
+		"4+1": {"$50,000", 5000000},      // $50,000
+		"4+0": {"$100", 10000},           // $100
+		"3+1": {"$100", 10000},           // $100
+		"3+0": {"$7", 700},               // $7
+		"2+1": {"$7", 700},               // $7
+		"2+0": {"$0", 0},                 // No prize
+		"1+1": {"$4", 400},               // $4
+		"1+0": {"$0", 0},                 // No prize
+		"0+1": {"$4", 400},               // $4
+		"0+0": {"$0", 0},                 // No prize
 	}
 
 	// Create the key for the prize tier
@@ -1237,7 +1237,7 @@ func getPowerballPrizeTierDescription(whiteBallMatches int, hasPowerball bool) s
 
 // checkPowerballTicket checks if a Powerball ticket is a winner and calculates the prize
 // This function compares the ticket numbers with the winning numbers and determines the prize
-func checkPowerballTicket(ticketNumbers []int, powerballNumber int, winningNumbers *WinningNumbers, powerPlayMultiplier int) (*TicketResult, error) {
+func checkPowerballTicket(ticketNumbers []int, powerballNumber int, winningNumbers *WinningNumbers, powerPlayMultiplier int, estimatedJackpot string) (*TicketResult, error) {
 	// Validate ticket input
 	if len(ticketNumbers) != 5 {
 		return nil, fmt.Errorf("invalid ticket: must have exactly 5 white ball numbers")
@@ -1262,8 +1262,8 @@ func checkPowerballTicket(ticketNumbers []int, powerballNumber int, winningNumbe
 	// Check if Powerball matches
 	hasPowerball := (powerballNumber == winningPowerball)
 
-	// Calculate base prize
-	prizeDescription, baseAmount := calculatePowerballPrize(whiteBallMatches, hasPowerball)
+	// Calculate base prize using the provided estimated jackpot
+	prizeDescription, baseAmount := calculatePowerballPrize(whiteBallMatches, hasPowerball, estimatedJackpot)
 
 	// Calculate Power Play prize if multiplier is provided
 	var powerPlayPrize string
@@ -1373,7 +1373,7 @@ func demonstratePowerballPrizes() {
 		fmt.Printf("Numbers: %v | Powerball: %d\n", ticket.whiteBalls, ticket.powerball)
 
 		// Check without Power Play
-		result, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 0)
+		result, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 0, "$500 Million")
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		} else {
@@ -1386,11 +1386,19 @@ func demonstratePowerballPrizes() {
 		}
 
 		// Check with Power Play (2x multiplier)
-		resultPP, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 2)
+		resultPP, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 2, "$500 Million")
 		if err != nil {
 			fmt.Printf("Power Play Error: %v\n", err)
 		} else if resultPP.PowerPlayMultiplier > 0 {
 			fmt.Printf("Power Play (2x): %s\n", resultPP.PowerPlayPrize)
+		}
+
+		// For 4+1 case, also show 4x multiplier to demonstrate $200,000
+		if ticket.description == "4 White Balls + Powerball" {
+			resultPP4x, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 4, "$500 Million")
+			if err == nil && resultPP4x.PowerPlayMultiplier > 0 {
+				fmt.Printf("Power Play (4x): %s\n", resultPP4x.PowerPlayPrize)
+			}
 		}
 
 		fmt.Println("---")
