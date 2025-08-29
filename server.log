@@ -1,0 +1,94 @@
+Testing Powerball Prize Calculation System...
+=== Powerball Prize Calculation Examples ===
+
+Winning Numbers: 10, 20, 30, 40, 50 | Powerball: 25
+
+Ticket: Jackpot Ticket
+Numbers: [10 20 30 40 50] | Powerball: 25
+Result: Grand Prize (Jackpot)
+Prize: $0.00
+Power Play (2x): $0
+---
+Ticket: 5 White Balls (no Powerball)
+Numbers: [10 20 30 40 50] | Powerball: 15
+Result: $1,000,000
+Prize: $1000000.00
+Power Play (2x): $2 Million
+---
+Ticket: 4 White Balls + Powerball
+Numbers: [10 20 30 40 60] | Powerball: 25
+Result: $50,000
+Prize: $50000.00
+Power Play (2x): $100000
+---
+Ticket: 4 White Balls (no Powerball)
+Numbers: [10 20 30 40 60] | Powerball: 15
+Result: $100
+Prize: $100.00
+Power Play (2x): $200
+---
+Ticket: 3 White Balls + Powerball
+Numbers: [10 20 30 70 80] | Powerball: 25
+Result: $100
+Prize: $100.00
+Power Play (2x): $200
+---
+Ticket: 3 White Balls (no Powerball)
+Numbers: [10 20 30 70 80] | Powerball: 15
+Result: $7
+Prize: $7.00
+Power Play (2x): $14
+---
+Ticket: 2 White Balls + Powerball
+Numbers: [10 20 90 100 110] | Powerball: 25
+Result: $7
+Prize: $7.00
+Power Play (2x): $14
+---
+Ticket: 1 White Ball + Powerball
+Numbers: [10 120 130 140 150] | Powerball: 25
+Result: $4
+Prize: $4.00
+Power Play (2x): $8
+---
+Ticket: Powerball Only
+Numbers: [160 170 180 190 200] | Powerball: 25
+Result: $4
+Prize: $4.00
+Power Play (2x): $8
+---
+Ticket: No Matches
+Numbers: [160 170 180 190 200] | Powerball: 15
+Result: $0
+Prize: No Prize
+Power Play (2x): $0
+---
+=== Power Play Multiplier Examples ===
+
+Base Prize: $100.00
+
+2x Multiplier: $200 ($200.00)
+3x Multiplier: $300 ($300.00)
+4x Multiplier: $400 ($400.00)
+5x Multiplier: $500 ($500.00)
+10x Multiplier: $1000 ($1000.00)
+
+$1,000,000 Prize with 10x Multiplier (should default to 2x):
+Result: $2 Million ($2000000.00)
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] POST   /adjust-contrast          --> main.adjustContrastHandler (3 handlers)
+[GIN-debug] POST   /lottery-winning-numbers  --> main.lotteryWinningNumbersHandler (3 handlers)
+[GIN-debug] POST   /lottery-prize-amounts    --> main.lotteryPrizeAmountsHandler (3 handlers)
+[GIN-debug] GET    /powerball-demo           --> main.powerballDemoHandler (3 handlers)
+[GIN-debug] POST   /check-powerball-ticket   --> main.checkPowerballTicketHandler (3 handlers)
+[GIN-debug] GET    /health                   --> main.main.func1 (3 handlers)
+[GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
+Please check https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-proxies for details.
+[GIN-debug] Listening and serving HTTP on :8080
+[GIN] 2025/08/29 - 16:29:05 | 200 |      397.25µs |             ::1 | GET      "/health"
+[GIN] 2025/08/29 - 16:29:21 | 200 |  2.531203833s |             ::1 | POST     "/check-powerball-ticket"

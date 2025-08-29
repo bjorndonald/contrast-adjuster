@@ -716,135 +716,133 @@ func parsePowerballPrizeHTML(htmlContent string) (*PrizeInfo, error) {
 func extractPowerballPrizeTiers(htmlContent string) ([]PrizeTier, error) {
 	var prizeTiers []PrizeTier
 
-	// Based on the actual HTML structure, we need to extract rows from the table
-	// Each row has 5 cells: Match, Powerball Winners, Powerball Prize, Power Play Winners, Power Play Prize
+	// Use the data-label approach which we know works reliably
+	// Look for table cells with data-label attributes
+	cellPattern := regexp.MustCompile(`<td[^>]*data-label="([^"]*)"[^>]*>\s*([^<]*)\s*</td>`)
+	cellMatches := cellPattern.FindAllStringSubmatch(htmlContent, -1)
 
-	// Pattern to match table rows with the data-label attributes and extract the match pattern from CSS classes
-	rowPattern := regexp.MustCompile(`<tr>\s*<td[^>]*data-label="Match"[^>]*>.*?item-powerball\s+([^"\s]+)[^>]*>.*?</td>\s*<td[^>]*data-label="Powerball Winners"[^>]*>\s*(\d*)\s*</td>\s*<td[^>]*data-label="Powerball Prize"[^>]*>\s*([^<]+)\s*</td>\s*<td[^>]*data-label="Power Play Winners"[^>]*>\s*(\d*)\s*</td>\s*<td[^>]*data-label="Power Play Prize"[^>]*>\s*([^<]*)\s*</td>\s*</tr>`)
-	matches := rowPattern.FindAllStringSubmatch(htmlContent, -1)
-
-	// Found prize tier rows with regex pattern
-
-	// If we found structured data with data-label attributes, use that
-	if len(matches) > 0 {
-		for _, match := range matches {
-			if len(match) >= 6 {
-				// Extract match pattern, winner counts and prizes
-				matchPattern := strings.TrimSpace(match[1])
-				powerballWinnersStr := strings.TrimSpace(match[2])
-				powerballPrize := strings.TrimSpace(match[3])
-				powerPlayWinnersStr := strings.TrimSpace(match[4])
-				powerPlayPrize := strings.TrimSpace(match[5])
-
-				// Parse winner counts (handle empty strings)
-				powerballWinners := 0
-				if powerballWinnersStr != "" {
-					if w, err := strconv.Atoi(powerballWinnersStr); err == nil {
-						powerballWinners = w
-					}
-				}
-
-				powerPlayWinners := 0
-				if powerPlayWinnersStr != "" {
-					if w, err := strconv.Atoi(powerPlayWinnersStr); err == nil {
-						powerPlayWinners = w
-					}
-				}
-
-				// Determine match description based on the CSS class pattern
-				matchDesc := determinePowerballMatchDescriptionFromPattern(matchPattern, powerballPrize)
-
-				prizeTier := PrizeTier{
-					Match:            matchDesc,
-					PowerballWinners: powerballWinners,
-					PowerballPrize:   powerballPrize,
-					PowerPlayWinners: powerPlayWinners,
-					PowerPlayPrize:   powerPlayPrize,
-				}
-
-				prizeTiers = append(prizeTiers, prizeTier)
-			}
+	// Group cells by their data-label
+	labelGroups := make(map[string][]string)
+	for _, match := range cellMatches {
+		if len(match) >= 3 {
+			label := strings.TrimSpace(match[1])
+			value := strings.TrimSpace(match[2])
+			labelGroups[label] = append(labelGroups[label], value)
 		}
 	}
 
-	// If we still don't have prize tiers, try a more flexible approach
-	if len(prizeTiers) == 0 {
+	// Extract prize tiers from the grouped data
+	if powerballWinners, ok := labelGroups["Powerball Winners"]; ok {
+		if powerballPrizes, ok2 := labelGroups["Powerball Prize"]; ok2 {
+			if powerPlayWinners, ok3 := labelGroups["Power Play Winners"]; ok3 {
+				if powerPlayPrizes, ok4 := labelGroups["Power Play Prize"]; ok4 {
+					// We have all the data we need - create exactly 9 prize tiers
+					// Based on the actual Powerball structure, we need to distinguish between different match combinations
+					// even if they have the same prize amounts
 
-		// Look for table cells with data-label attributes more broadly
-		cellPattern := regexp.MustCompile(`<td[^>]*data-label="([^"]*)"[^>]*>\s*([^<]*)\s*</td>`)
-		cellMatches := cellPattern.FindAllStringSubmatch(htmlContent, -1)
+					// Create specific match descriptions based on the actual data
+					var matchDescriptions []string
 
-		// Found cells with data-label attributes
+					// Process each row to determine the specific match description
+					for i := 0; i < len(powerballPrizes) && i < 9; i++ {
+						prize := strings.TrimSpace(powerballPrizes[i])
+						// ppPrize := ""
+						// if i < len(powerPlayPrizes) {
+						// 	ppPrize = strings.TrimSpace(powerPlayPrizes[i])
+						// }
 
-		// Group cells by their data-label
-		labelGroups := make(map[string][]string)
-		for _, match := range cellMatches {
-			if len(match) >= 3 {
-				label := strings.TrimSpace(match[1])
-				value := strings.TrimSpace(match[2])
-				labelGroups[label] = append(labelGroups[label], value)
-			}
-		}
-
-		// Group cells by their data-label
-
-		// Try to extract prize tiers from the grouped data
-		if powerballWinners, ok := labelGroups["Powerball Winners"]; ok {
-			if powerballPrizes, ok2 := labelGroups["Powerball Prize"]; ok2 {
-				if powerPlayWinners, ok3 := labelGroups["Power Play Winners"]; ok3 {
-					if powerPlayPrizes, ok4 := labelGroups["Power Play Prize"]; ok4 {
-						// We have all the data we need
-						maxLen := len(powerballWinners)
-						if len(powerballPrizes) < maxLen {
-							maxLen = len(powerballPrizes)
+						// Determine match description based on prize amounts and position
+						var matchDesc string
+						switch {
+						case prize == "Grand Prize":
+							matchDesc = "5+1 (Jackpot)"
+						case prize == "$1,000,000":
+							matchDesc = "5+0"
+						case prize == "$50,000":
+							matchDesc = "4+1"
+						case prize == "$100":
+							// Distinguish between 4+0 and 3+1 based on position
+							if i == 3 {
+								matchDesc = "4+0"
+							} else {
+								matchDesc = "3+1"
+							}
+						case prize == "$7":
+							// Distinguish between 3+0 and 2+1 based on position
+							if i == 5 {
+								matchDesc = "3+0"
+							} else {
+								matchDesc = "2+1"
+							}
+						case prize == "$4":
+							// Distinguish between 1+1 and 0+1 based on position
+							if i == 7 {
+								matchDesc = "1+1"
+							} else {
+								matchDesc = "0+1"
+							}
+						default:
+							matchDesc = fmt.Sprintf("Match %d", i+1)
 						}
-						if len(powerPlayWinners) < maxLen {
-							maxLen = len(powerPlayWinners)
+
+						matchDescriptions = append(matchDescriptions, matchDesc)
+					}
+
+					// Ensure we have exactly 9 entries
+					maxEntries := 9
+					if len(powerballWinners) < maxEntries {
+						maxEntries = len(powerballWinners)
+					}
+					if len(powerballPrizes) < maxEntries {
+						maxEntries = len(powerballPrizes)
+					}
+					if len(powerPlayWinners) < maxEntries {
+						maxEntries = len(powerPlayWinners)
+					}
+					if len(powerPlayPrizes) < maxEntries {
+						maxEntries = len(powerPlayPrizes)
+					}
+					if len(matchDescriptions) < maxEntries {
+						maxEntries = len(matchDescriptions)
+					}
+
+					for i := 0; i < maxEntries; i++ {
+						// Parse winner counts (handle empty strings)
+						powerballWinnersCount := 0
+						if i < len(powerballWinners) && powerballWinners[i] != "" {
+							if w, err := strconv.Atoi(powerballWinners[i]); err == nil {
+								powerballWinnersCount = w
+							}
 						}
-						if len(powerPlayPrizes) < maxLen {
-							maxLen = len(powerPlayPrizes)
+
+						powerPlayWinnersCount := 0
+						if i < len(powerPlayWinners) && powerPlayWinners[i] != "" {
+							if w, err := strconv.Atoi(powerPlayWinners[i]); err == nil {
+								powerPlayWinnersCount = w
+							}
 						}
 
-						// Creating prize tiers from grouped data
-
-						for i := 0; i < maxLen; i++ {
-							// Parse winner counts (handle empty strings)
-							powerballWinnersCount := 0
-							if i < len(powerballWinners) && powerballWinners[i] != "" {
-								if w, err := strconv.Atoi(powerballWinners[i]); err == nil {
-									powerballWinnersCount = w
-								}
-							}
-
-							powerPlayWinnersCount := 0
-							if i < len(powerPlayWinners) && powerPlayWinners[i] != "" {
-								if w, err := strconv.Atoi(powerPlayWinners[i]); err == nil {
-									powerPlayWinnersCount = w
-								}
-							}
-
-							prize := ""
-							if i < len(powerballPrizes) {
-								prize = strings.TrimSpace(powerballPrizes[i])
-							}
-
-							ppPrize := ""
-							if i < len(powerPlayPrizes) {
-								ppPrize = strings.TrimSpace(powerPlayPrizes[i])
-							}
-
-							matchDesc := determinePowerballMatchDescription(prize)
-
-							prizeTier := PrizeTier{
-								Match:            matchDesc,
-								PowerballWinners: powerballWinnersCount,
-								PowerballPrize:   prize,
-								PowerPlayWinners: powerPlayWinnersCount,
-								PowerPlayPrize:   ppPrize,
-							}
-
-							prizeTiers = append(prizeTiers, prizeTier)
+						prize := ""
+						if i < len(powerballPrizes) {
+							prize = strings.TrimSpace(powerballPrizes[i])
 						}
+
+						ppPrize := ""
+						if i < len(powerPlayPrizes) {
+							ppPrize = strings.TrimSpace(powerPlayPrizes[i])
+						}
+
+						matchDesc := matchDescriptions[i]
+
+						prizeTier := PrizeTier{
+							Match:            matchDesc,
+							PowerballWinners: powerballWinnersCount,
+							PowerballPrize:   prize,
+							PowerPlayWinners: powerPlayWinnersCount,
+							PowerPlayPrize:   ppPrize,
+						}
+
+						prizeTiers = append(prizeTiers, prizeTier)
 					}
 				}
 			}
@@ -873,35 +871,35 @@ func extractPowerballPrizeTiers(htmlContent string) ([]PrizeTier, error) {
 				PowerballWinners: 0,
 				PowerballPrize:   "$50,000",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$200,000",
+				PowerPlayPrize:   "$100,000",
 			},
 			{
 				Match:            "4+0",
 				PowerballWinners: 0,
 				PowerballPrize:   "$100",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$400",
+				PowerPlayPrize:   "$200",
 			},
 			{
 				Match:            "3+1",
 				PowerballWinners: 0,
 				PowerballPrize:   "$100",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$400",
+				PowerPlayPrize:   "$200",
 			},
 			{
 				Match:            "3+0",
 				PowerballWinners: 0,
 				PowerballPrize:   "$7",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$28",
+				PowerPlayPrize:   "$14",
 			},
 			{
 				Match:            "2+1",
 				PowerballWinners: 0,
 				PowerballPrize:   "$7",
 				PowerPlayWinners: 0,
-				PowerPlayPrize:   "$28",
+				PowerPlayPrize:   "$14",
 			},
 			{
 				Match:            "1+1",
@@ -1126,3 +1124,298 @@ func parseMegaMillionsPrizeData(detailedData *DetailedDrawData, playDate string)
 
 	return prizeInfo, nil
 }
+
+// calculatePowerballPrize calculates the prize amount for a given number of matching balls and Powerball
+// This function implements the static prize tier structure for Powerball
+func calculatePowerballPrize(whiteBallMatches int, hasPowerball bool) (string, int) {
+	// Define the static prize tiers based on Powerball rules
+	// Format: (whiteBallMatches, hasPowerball) -> (prize description, base amount in cents)
+	prizeTiers := map[string]struct {
+		description string
+		baseAmount  int // in cents
+	}{
+		"5+1": {"Grand Prize (Jackpot)", 0}, // Jackpot amount varies
+		"5+0": {"$1,000,000", 100000000},    // $1,000,000
+		"4+1": {"$50,000", 5000000},         // $50,000
+		"4+0": {"$100", 10000},              // $100
+		"3+1": {"$100", 10000},              // $100
+		"3+0": {"$7", 700},                  // $7
+		"2+1": {"$7", 700},                  // $7
+		"2+0": {"$0", 0},                    // No prize
+		"1+1": {"$4", 400},                  // $4
+		"1+0": {"$0", 0},                    // No prize
+		"0+1": {"$4", 400},                  // $4
+		"0+0": {"$0", 0},                    // No prize
+	}
+
+	// Create the key for the prize tier
+	key := fmt.Sprintf("%d+%d", whiteBallMatches, boolToInt(hasPowerball))
+
+	// Get the prize information
+	if prizeInfo, exists := prizeTiers[key]; exists {
+		return prizeInfo.description, prizeInfo.baseAmount
+	}
+
+	// Default case for invalid combinations
+	return "No Prize", 0
+}
+
+// calculatePowerPlayPrize calculates the Power Play prize amount based on the base prize and multiplier
+// This function applies the Power Play multiplier to the base prize amount
+func calculatePowerPlayPrize(baseAmount int, multiplier int) (string, int) {
+	// Power Play multipliers: 2x, 3x, 4x, 5x, 10x
+	// Note: 10x multiplier only applies to prizes of $150,000 or less
+
+	// Check if 10x multiplier applies (only for prizes $150,000 or less)
+	if multiplier == 10 && baseAmount > 15000000 { // $150,000 in cents
+		multiplier = 2 // Default to 2x for larger prizes
+	}
+
+	// Calculate the Power Play prize
+	powerPlayAmount := baseAmount * multiplier
+
+	// Format the prize amount
+	var formattedPrize string
+	if powerPlayAmount >= 100000000 { // $1,000,000 or more
+		formattedPrize = fmt.Sprintf("$%d Million", powerPlayAmount/100000000)
+	} else if powerPlayAmount >= 1000000 { // $1,000,000
+		formattedPrize = fmt.Sprintf("$%d", powerPlayAmount/100)
+	} else if powerPlayAmount >= 100000 { // $100,000 or more
+		formattedPrize = fmt.Sprintf("$%d", powerPlayAmount/100)
+	} else if powerPlayAmount >= 10000 { // $100 or more
+		formattedPrize = fmt.Sprintf("$%d", powerPlayAmount/100)
+	} else if powerPlayAmount >= 100 { // $1 or more
+		formattedPrize = fmt.Sprintf("$%d", powerPlayAmount/100)
+	} else {
+		formattedPrize = "$0"
+	}
+
+	return formattedPrize, powerPlayAmount
+}
+
+// boolToInt converts a boolean to an integer (true = 1, false = 0)
+// This helper function is used to create the prize tier key
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// getPowerballPrizeTierDescription returns a human-readable description of the prize tier
+// This function provides clear descriptions for each Powerball prize tier
+func getPowerballPrizeTierDescription(whiteBallMatches int, hasPowerball bool) string {
+	switch {
+	case whiteBallMatches == 5 && hasPowerball:
+		return "5 white balls + Powerball (Jackpot)"
+	case whiteBallMatches == 5 && !hasPowerball:
+		return "5 white balls (no Powerball)"
+	case whiteBallMatches == 4 && hasPowerball:
+		return "4 white balls + Powerball"
+	case whiteBallMatches == 4 && !hasPowerball:
+		return "4 white balls (no Powerball)"
+	case whiteBallMatches == 3 && hasPowerball:
+		return "3 white balls + Powerball"
+	case whiteBallMatches == 3 && !hasPowerball:
+		return "3 white balls (no Powerball)"
+	case whiteBallMatches == 2 && hasPowerball:
+		return "2 white balls + Powerball"
+	case whiteBallMatches == 2 && !hasPowerball:
+		return "2 white balls (no Powerball)"
+	case whiteBallMatches == 1 && hasPowerball:
+		return "1 white ball + Powerball"
+	case whiteBallMatches == 1 && !hasPowerball:
+		return "1 white ball (no Powerball)"
+	case whiteBallMatches == 0 && hasPowerball:
+		return "Powerball only"
+	case whiteBallMatches == 0 && !hasPowerball:
+		return "No matches"
+	default:
+		return "Invalid combination"
+	}
+}
+
+// checkPowerballTicket checks if a Powerball ticket is a winner and calculates the prize
+// This function compares the ticket numbers with the winning numbers and determines the prize
+func checkPowerballTicket(ticketNumbers []int, powerballNumber int, winningNumbers *WinningNumbers, powerPlayMultiplier int) (*TicketResult, error) {
+	// Validate ticket input
+	if len(ticketNumbers) != 5 {
+		return nil, fmt.Errorf("invalid ticket: must have exactly 5 white ball numbers")
+	}
+
+	if powerballNumber < 1 || powerballNumber > 26 {
+		return nil, fmt.Errorf("invalid Powerball number: must be between 1 and 26")
+	}
+
+	// Validate winning numbers
+	if winningNumbers == nil {
+		return nil, fmt.Errorf("winning numbers cannot be nil")
+	}
+
+	// Extract winning numbers
+	winningWhiteBalls := []int{winningNumbers.N1, winningNumbers.N2, winningNumbers.N3, winningNumbers.N4, winningNumbers.N5}
+	winningPowerball := winningNumbers.MBall
+
+	// Count matching white balls
+	whiteBallMatches := countMatchingNumbers(ticketNumbers, winningWhiteBalls)
+
+	// Check if Powerball matches
+	hasPowerball := (powerballNumber == winningPowerball)
+
+	// Calculate base prize
+	prizeDescription, baseAmount := calculatePowerballPrize(whiteBallMatches, hasPowerball)
+
+	// Calculate Power Play prize if multiplier is provided
+	var powerPlayPrize string
+	var powerPlayAmount int
+	if powerPlayMultiplier > 0 {
+		powerPlayPrize, powerPlayAmount = calculatePowerPlayPrize(baseAmount, powerPlayMultiplier)
+	}
+
+	// Determine if ticket is a winner
+	isWinner := baseAmount > 0 || (whiteBallMatches == 5 && hasPowerball) // Jackpot is always a winner
+
+	// Create ticket result
+	result := &TicketResult{
+		IsWinner:            isWinner,
+		WhiteBallMatches:    whiteBallMatches,
+		HasPowerball:        hasPowerball,
+		PrizeDescription:    prizeDescription,
+		BasePrize:           baseAmount,
+		PowerPlayMultiplier: powerPlayMultiplier,
+		PowerPlayPrize:      powerPlayPrize,
+		PowerPlayAmount:     powerPlayAmount,
+		TotalPrize:          baseAmount,
+	}
+
+	// If Power Play is active, use the Power Play amount as total
+	if powerPlayMultiplier > 0 {
+		result.TotalPrize = powerPlayAmount
+	}
+
+	return result, nil
+}
+
+// countMatchingNumbers counts how many numbers from the ticket match the winning numbers
+// This helper function compares two slices and returns the count of matching numbers
+func countMatchingNumbers(ticketNumbers []int, winningNumbers []int) int {
+	count := 0
+	ticketSet := make(map[int]bool)
+
+	// Create a set of ticket numbers for efficient lookup
+	for _, num := range ticketNumbers {
+		ticketSet[num] = true
+	}
+
+	// Count matches
+	for _, winningNum := range winningNumbers {
+		if ticketSet[winningNum] {
+			count++
+		}
+	}
+
+	return count
+}
+
+// TicketResult represents the result of checking a lottery ticket
+// This struct contains all the information about whether the ticket won and the prize amounts
+type TicketResult struct {
+	IsWinner            bool   `json:"is_winner"`
+	WhiteBallMatches    int    `json:"white_ball_matches"`
+	HasPowerball        bool   `json:"has_powerball"`
+	PrizeDescription    string `json:"prize_description"`
+	BasePrize           int    `json:"base_prize"` // in cents
+	PowerPlayMultiplier int    `json:"power_play_multiplier"`
+	PowerPlayPrize      string `json:"power_play_prize"`
+	PowerPlayAmount     int    `json:"power_play_amount"` // in cents
+	TotalPrize          int    `json:"total_prize"`       // in cents
+}
+
+// demonstratePowerballPrizes demonstrates the Powerball prize calculation system
+// This function shows examples of different ticket combinations and their prizes
+func demonstratePowerballPrizes() {
+	fmt.Println("=== Powerball Prize Calculation Examples ===\n")
+
+	// Example winning numbers (you can change these)
+	winningNumbers := &WinningNumbers{
+		N1:    10,
+		N2:    20,
+		N3:    30,
+		N4:    40,
+		N5:    50,
+		MBall: 25, // Powerball number
+	}
+
+	fmt.Printf("Winning Numbers: %d, %d, %d, %d, %d | Powerball: %d\n\n",
+		winningNumbers.N1, winningNumbers.N2, winningNumbers.N3, winningNumbers.N4, winningNumbers.N5, winningNumbers.MBall)
+
+	// Example tickets to test
+	exampleTickets := []struct {
+		description string
+		whiteBalls  []int
+		powerball   int
+	}{
+		{"Jackpot Ticket", []int{10, 20, 30, 40, 50}, 25},
+		{"5 White Balls (no Powerball)", []int{10, 20, 30, 40, 50}, 15},
+		{"4 White Balls + Powerball", []int{10, 20, 30, 40, 60}, 25},
+		{"4 White Balls (no Powerball)", []int{10, 20, 30, 40, 60}, 15},
+		{"3 White Balls + Powerball", []int{10, 20, 30, 70, 80}, 25},
+		{"3 White Balls (no Powerball)", []int{10, 20, 30, 70, 80}, 15},
+		{"2 White Balls + Powerball", []int{10, 20, 90, 100, 110}, 25},
+		{"1 White Ball + Powerball", []int{10, 120, 130, 140, 150}, 25},
+		{"Powerball Only", []int{160, 170, 180, 190, 200}, 25},
+		{"No Matches", []int{160, 170, 180, 190, 200}, 15},
+	}
+
+	// Test each ticket
+	for _, ticket := range exampleTickets {
+		fmt.Printf("Ticket: %s\n", ticket.description)
+		fmt.Printf("Numbers: %v | Powerball: %d\n", ticket.whiteBalls, ticket.powerball)
+
+		// Check without Power Play
+		result, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 0)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+		} else {
+			fmt.Printf("Result: %s\n", result.PrizeDescription)
+			if result.IsWinner {
+				fmt.Printf("Prize: $%.2f\n", float64(result.BasePrize)/100)
+			} else {
+				fmt.Printf("Prize: No Prize\n")
+			}
+		}
+
+		// Check with Power Play (2x multiplier)
+		resultPP, err := checkPowerballTicket(ticket.whiteBalls, ticket.powerball, winningNumbers, 2)
+		if err != nil {
+			fmt.Printf("Power Play Error: %v\n", err)
+		} else if resultPP.PowerPlayMultiplier > 0 {
+			fmt.Printf("Power Play (2x): %s\n", resultPP.PowerPlayPrize)
+		}
+
+		fmt.Println("---")
+	}
+
+	// Demonstrate Power Play multipliers
+	fmt.Println("=== Power Play Multiplier Examples ===\n")
+
+	// Test a $100 prize with different multipliers
+	basePrize := 10000 // $100 in cents
+	multipliers := []int{2, 3, 4, 5, 10}
+
+	fmt.Printf("Base Prize: $%.2f\n\n", float64(basePrize)/100)
+
+	for _, multiplier := range multipliers {
+		powerPlayPrize, powerPlayAmount := calculatePowerPlayPrize(basePrize, multiplier)
+		fmt.Printf("%dx Multiplier: %s ($%.2f)\n", multiplier, powerPlayPrize, float64(powerPlayAmount)/100)
+	}
+
+	// Test $1,000,000 prize with 10x multiplier (should default to 2x)
+	fmt.Printf("\n$1,000,000 Prize with 10x Multiplier (should default to 2x):\n")
+	jackpotBase := 100000000 // $1,000,000 in cents
+	powerPlayPrize, powerPlayAmount := calculatePowerPlayPrize(jackpotBase, 10)
+	fmt.Printf("Result: %s ($%.2f)\n", powerPlayPrize, float64(powerPlayAmount)/100)
+}
+
+// demonstratePowerballPrizes can be called from main.go to show the Powerball prize calculation system
+// This function demonstrates different ticket combinations and their prizes
