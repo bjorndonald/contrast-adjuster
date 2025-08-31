@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -215,6 +216,8 @@ func scrapePowerballPage(url string) (*WinningNumbers, error) {
 		}
 	}
 
+	log.Println("This is running for url", url)
+
 	// Parse HTML to extract winning numbers
 	winningNumbers, err := parsePowerballHTML(string(body))
 	if err != nil {
@@ -230,7 +233,7 @@ func parsePowerballHTML(htmlContent string) (*WinningNumbers, error) {
 	// Extract white ball numbers (first 5 numbers)
 	whiteBallPattern := regexp.MustCompile(`<div class="form-control col white-balls item-powerball">(\d+)</div>`)
 	whiteBallMatches := whiteBallPattern.FindAllStringSubmatch(htmlContent, -1)
-
+	fmt.Println("whiteBallMatches", whiteBallMatches)
 	if len(whiteBallMatches) < 5 {
 		return nil, fmt.Errorf("could not find all 5 white ball numbers, found %d", len(whiteBallMatches))
 	}
